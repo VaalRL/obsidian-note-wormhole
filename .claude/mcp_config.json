@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "electron-debug": {
+      "command": "node",
+      "args": [
+        "C:\Users\USER\electron-mcp-server\build\index.js"
+      ],
+      "env": {
+        "DEBUG_PORT": "9222"
+      }
+    }
+  }
+}

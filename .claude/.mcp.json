@@ -1,0 +1,72 @@
+{
+  "mcpServers": {
+    "memory": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-memory"
+      ]
+    },
+    "context7": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@upstash/context7-mcp"
+      ]
+    },
+    "github": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-github"
+      ],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "<YOUR_TOKEN>"
+      }
+    },
+    "fetch": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-fetch"
+      ]
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "/path/to/allowed/files"
+      ]
+    },
+    "chrome-devtools": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "chrome-devtools-mcp@latest"
+      ]
+    },
+    "markitdown": {
+      "command": "docker",
+      "args": [
+        "run",
+        "--rm",
+        "-i",
+        "markitdown-mcp:latest"
+      ]
+    },
+    "postman-api-http-server": {
+      "type": "http",
+      "url": "https://mcp.postman.com/{minimal | mcp}",
+      "headers": {
+        "Authorization": "Bearer ${input:postman-api-key}"
+      }
+    },
+    "obsidian-monitor": {
+      "command": "node",
+      "args": [
+        "C:\\Users\\SyncthingServiceAcct\\Obs20240105\\Obs20240105\\06. Principles\\06. 04. Vibe Coding\\Steering Docs\\obsidian-mcp-monitor\\dist\\index.js"
+      ]
+    }
+  }
+}

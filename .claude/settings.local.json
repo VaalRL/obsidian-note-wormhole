@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(npm run build:*)",
+      "Bash(dir:*)",
+      "Bash(npx tsc:*)",
+      "Bash(findstr:*)",
+      "Read(//c/**)",
+      "Bash(timeout 60 npx tsc --noEmit)",
+      "Bash(test -f \"src/tests/security/CRDTSecurityTest.ts\")",
+      "Bash(timeout 90 npx tsc --noEmit)",
+      "Bash(timeout 120 npx tsc --noEmit)",
+      "Bash(cut:*)",
+      "Bash(timeout 30 npx tsc --noEmit --skipLibCheck)",
+      "Bash(timeout 30 npx tsc --noEmit)",
+      "Bash(timeout 20 npx tsc --noEmit --skipLibCheck)",
+      "Bash(timeout 5 npm run build)",
+      "Bash(set SKIP_PREFLIGHT_CHECK=true)",
+      "Bash(set TSC_COMPILE_ON_ERROR=true)",
+      "Bash(node:*)",
+      "Bash(timeout 10 npx eslint src/components/extensions/unifiedRenderingArchitecture.ts --no-eslintrc --parser @typescript-eslint/parser)",
+      "Bash(Select-String \"error TS\")",
+      "Bash(Measure-Object)",
+      "Bash(Select-Object -ExpandProperty Count)",
+      "Bash(cat:*)"
+    ],
+    "deny": [],
+    "ask": [],
+    "additionalDirectories": [
+      "C:\\Users\\USER\\Downloads\\git\\Razertek Backstage\\saas-admin-dashboard\\src\\components\\DataManagement",
+      "C:\\c\\Users\\whoam\\Downloads\\git\\lab-admin-SaaS"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if command -v semgrep >/dev/null 2>&1; then semgrep --config=auto \"$CLAUDE_TOOL_FILE_PATH\" 2>/dev/null || true; fi; if command -v bandit >/dev/null 2>&1 && [[ \"$CLAUDE_TOOL_FILE_PATH\" == *.py ]]; then bandit \"$CLAUDE_TOOL_FILE_PATH\" 2>/dev/null || true; fi; if command -v gitleaks >/dev/null 2>&1; then gitleaks detect --source=\"$CLAUDE_TOOL_FILE_PATH\" --no-git 2>/dev/null || true; fi; if grep -qE '(password|secret|key|token)\\s*=\\s*[\"\\'][^\"\\'\n]{8,}' \"$CLAUDE_TOOL_FILE_PATH\" 2>/dev/null; then echo \"Warning: Potential hardcoded secrets detected in $CLAUDE_TOOL_FILE_PATH\" >&2; fi"
+          }
+        ]
+      }
+    ]
+  }
+}
