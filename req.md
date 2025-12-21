@@ -16,7 +16,7 @@
 **Note Wormhole** is an Obsidian plugin that instantly transforms the user's local machine into a temporary web server. Utilizing Cloudflare Tunnel technology, it generates a public HTTPS URL for read-only note sharing without exposing the user's real IP address.
 
 ### 1.2 Core Value Proposition
-1.  **Physical Control**: The lifecycle of the link is bound to the user's physical presence. Closing the plugin or the laptop causes the "wormhole" to collapse, making the link immediately invalid (404).
+1.  **Physical Control**: The lifecycle of the link is bound to the user's physical presence. Closing the plugin, **closing the note tab/leaf**, or closing the laptop causes the "wormhole" to collapse, making the link immediately invalid (404).
 2.  **Privacy First**: No data is uploaded to third-party cloud storage. Content is streamed directly from RAM via an encrypted tunnel.
 3.  **Reader Centric**: Designed for "Broadcast" rather than "Collaboration." Provides a clean reading interface with optional anti-copy protection.
 
@@ -64,12 +64,15 @@ sequenceDiagram
 
 | ID | Feature | Description | Priority |
 | :--- | :--- | :--- | :--- |
-| **F-01** | **Open Wormhole** | Activate local server and tunnel via Ribbon Icon or Command Palette. | **P0** |
+| **F-01** | **Open Wormhole** | Activate via Command Palette (current note) OR **Ribbon Icon (opens Tab Selector Modal)**. | **P0** |
 | **F-02** | **Secure Tunneling** | Automatically establish Cloudflare Quick Tunnel; hide Origin IP; generate HTTPS URL. | **P0** |
 | **F-03** | **Live Rendering** | Convert current note to HTML, supporting basic Obsidian syntax (Callouts, Tables, Quotes). | **P0** |
 | **F-04** | **Auto-Copy** | Automatically copy the generated URL to the system clipboard upon success. | **P0** |
 | **F-05** | **Kill Switch** | Mandatory process termination when Obsidian closes or the plugin is unloaded. | **P0** |
 | **F-06** | **Status Indicator** | Status Bar: ⚪ Idle / 🟡 Opening... / 🟢 Live. | **P1** |
+| **F-07** | **Active Leaf Only** | **(Lifecycle)** The wormhole is bound to the specific note tab. Closing that tab automatically terminates the session. | **P0** |
+| **F-08** | **Tab Header Indicator** | Display a status icon (🔴/🟢) in the note's tab header to show sharing status at a glance. | **P1** |
+| **F-09** | **In-Note Controls** | A toolbar within the note (or tab header menu) to toggle "Share" and "Anti-Copy" settings specifically for that active note. | **P1** |
 
 ### 3.2 Security & Protection
 
@@ -95,6 +98,12 @@ sequenceDiagram
 * **Ribbon Icon**: Use an icon resembling a vortex, radar, or aperture (e.g., `radio-tower`).
     * *State: Off* -> Grey / Dimmed.
     * *State: On* -> Green / Active accent color.
+
+### 4.3 Tab Header UI (**New**)
+*   **Status Icon**: Small dot or icon next to the file title.
+*   **Context Menu/Toolbar**: Clicking the icon or using the tab menu should allow:
+    *   Toggle Wormhole On/Off.
+    *   Quick Toggle: "Prevent Selection" (Anti-Copy) for this specific session.
 
 ---
 
