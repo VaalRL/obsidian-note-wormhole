@@ -1,0 +1,37 @@
+# NPM environment
+node_modules/
+npm-debug.log
+package-lock.json
+# Yarn environment
+yarn.lock
+yarn-error.log
+
+# Build artifacts
+main.js
+# styles.css is source, so we keep it. If you used SCSS, you'd ignore the output css.
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# IDE configuration
+.idea/
+.vscode/
+
+# Testing & Development
+Test Vault/
+test-vault/
+
+# AI & Agent Context (Private/Local)
+.claude/
+claude/
+.gemini/
+CLAUDE.md
+gemini.md
+.mcp.json
+obsidian-mcp-monitor/
+Browser Extensions/
+
+# Local Tasks/Docs
+todo.md
+OBSIDIAN_PLUGIN_DEVELOPMENT_RULES.md

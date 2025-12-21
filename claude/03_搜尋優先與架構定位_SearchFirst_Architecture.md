@@ -1,17 +1,34 @@
-# 03｜搜尋優先與架構定位（Search-First & Architecture-First）
+# 03｜搜尋優先與架構定位（Search First & Architecture）
 
-## 原則
-- **先 Architecture**：先讀 `ARCHITECTURE.md` 決定正確模組與延伸點。
-- **先搜尋**：用 Grep/Glob（專用工具）找既有實作與相似邏輯。
-- **延伸，不複製**：不要產生 `*_v2`, `enhanced_*`, `*_new` 類別或平行檔案。
+## 核心原則
 
-## 禁止事項
-- 重複檔案／重複邏輯（造成多個 SSOT）
-- 硬寫常數（應改用設定檔/環境變數）
+在寫下一行程式碼之前，你必須先知道「東西在哪裡」以及「該放在哪裡」。
 
-## 整併策略（Consolidate Early）
-- 發現相似功能儘早抽取共用模組
-- 主動償還技術債，保持結構乾淨
+## 專案關鍵路徑
 
-## 推薦流程
-1. Architecture → 2. 搜尋 → 3. 閱讀 → 4. 設計延伸方案 → 5. 實作＋測試 → 6. 整併與文件
+1.  **功能需求**：`req.md` (Product Requirements Document)
+2.  **開發規範**：`OBSIDIAN_PLUGIN_DEVELOPMENT_RULES.md` (一定要看！)
+3.  **程式碼入口**：`main.ts` (Obsidian Plugin Entry Point)
+4.  **樣式檔案**：`styles.css`
+5.  **核心邏輯**：`src/` 目錄
+
+## 如何定位程式碼？
+
+1.  **全局搜尋（Search）**：
+    *   先用關鍵字搜尋現有檔案。
+    *   例如：要實作「複製連結」，先搜 "copy", "clipboard", "url"。
+    *   例如：要修改「設定」，先搜 "Setting", "PluginSettingTab"。
+
+2.  **追蹤入口（Trace）**：
+    *   從 `main.ts` 的 `onload()` 開始追蹤指令（Command）或 Ribbon Icon 的註冊。
+    *   從 `main.ts` 的 `loadSettings()` 追蹤設定相關邏輯。
+
+3.  **閱讀 PRD 邏輯**：
+    *   對照 `req.md` 的 Sequence Diagram 理解資料流。
+    *   Plugin -> Local Server -> Tunnel -> URL。
+
+## 常見開發誤區
+
+*   **不要假設**：不要假設某個功能不存在，先搜再說。
+*   **不要硬幹**：不要自己寫一套全新的 UI 元件，先看有沒有現成的 Obsidian UI 或是專案內已有的元件。
+*   **遵守 API**：所有對 Obsidian 的操作必須透過 API (e.g., `this.app.workspace`, `this.app.vault`)，嚴禁繞過 API 直接操作 DOM 或 FS（除非有極強烈的理由且符合規範）。
