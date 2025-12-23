@@ -34,7 +34,7 @@ export class LocalServerService {
                 const address = this.server?.address();
                 if (address && typeof address !== "string") {
                     this.port = address.port;
-                    console.log(`[Wormhole] Local server started on port ${this.port}`);
+                    // console.log(`[Wormhole] Local server started on port ${this.port}`);
                     resolve(this.port);
                 } else {
                     reject(new Error("Failed to get server port"));
@@ -62,7 +62,7 @@ export class LocalServerService {
         if (this.server) {
             this.server.close();
             this.server = null;
-            console.log("[Wormhole] Local server stopped");
+            // console.log("[Wormhole] Local server stopped");
         }
     }
 

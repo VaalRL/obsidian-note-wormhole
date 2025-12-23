@@ -1,4 +1,4 @@
-import { App, FuzzySuggestModal, MarkdownView, WorkspaceLeaf } from "obsidian";
+import { App, FuzzySuggestModal, MarkdownView, WorkspaceLeaf, FuzzyMatch } from "obsidian";
 import { WormholeManager } from "../services/WormholeManager";
 
 interface TabChoice {
@@ -13,7 +13,11 @@ export class WormholeLauncherModal extends FuzzySuggestModal<TabChoice> {
     constructor(app: App, manager: WormholeManager) {
         super(app);
         this.manager = manager;
-        this.setPlaceholder("Select a tab to open a Wormhole...");
+        this.setPlaceholder("Select a tab to trigger Wormhole tunneling...");
+        this.setInstructions([
+            { command: "↵", purpose: "to toggle wormhole" },
+            { command: "esc", purpose: "to dismiss" },
+        ]);
     }
 
     getItems(): TabChoice[] {
@@ -34,9 +38,38 @@ export class WormholeLauncherModal extends FuzzySuggestModal<TabChoice> {
     }
 
     getItemText(item: TabChoice): string {
-        const state = item.isActive ? "🟢 (Active) " : "";
-        return `${state}${item.file}`;
+        return item.file;
     }
+
+    renderSuggestion(match: FuzzyMatch<TabChoice>, el: HTMLElement): void {
+        const item = match.item;
+        el.addClass("mod-complex");
+
+        const content = el.createDiv({ cls: "suggestion-content" });
+
+        const title = content.createDiv({ cls: "suggestion-title" });
+        title.setText(this.getBasename(item.file));
+
+        const note = content.createDiv({ cls: "suggestion-note" });
+        note.setText(item.file);
+
+        if (item.isActive) {
+            const aux = el.createDiv({ cls: "suggestion-aux" });
+            aux.createSpan({ cls: "suggestion-flair", text: "LIVE" })
+                .style.color = "var(--color-accent)";
+        }
+
+        // Optionally highlight the matched characters
+        // super.renderSuggestion(match, el) usually does this, but since we custom render,
+        // we might lose highlighting unless we implement it.
+        // For now, let's just stick to the requested UI structure. Highlighting in complex mode is tricky.
+    }
+
+    private getBasename(path: string): string {
+        const parts = path.split("/");
+        return parts[parts.length - 1];
+    }
+
 
     onChooseItem(item: TabChoice, evt: MouseEvent | KeyboardEvent): void {
         const view = item.leaf.view as MarkdownView;

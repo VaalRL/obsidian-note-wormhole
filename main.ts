@@ -3,6 +3,7 @@ import { WormholeSettingTab } from './src/settings/WormholeSettingTab';
 import { WormholeSettings, DEFAULT_SETTINGS } from './src/settings/WormholeSettings';
 import { WormholeManager } from './src/services/WormholeManager';
 import { WormholeLauncherModal } from './src/ui/WormholeLauncherModal';
+import { WelcomeModal } from './src/ui/WelcomeModal';
 import { TabHeaderDecorator } from './src/ui/TabHeaderDecorator';
 
 export default class NoteWormholePlugin extends Plugin {
@@ -15,6 +16,13 @@ export default class NoteWormholePlugin extends Plugin {
         console.log('Loading Note Wormhole Plugin');
 
         await this.loadSettings();
+
+        // Check for First Run
+        if (!this.settings.hasSeenWelcome) {
+            new WelcomeModal(this.app).open();
+            this.settings.hasSeenWelcome = true;
+            await this.saveSettings();
+        }
 
         // 1. Initialize Services
         this.wormholeManager = new WormholeManager(this.app, this);
