@@ -58,12 +58,14 @@ export class WormholeOverlay {
         // Copy Link
         const btnCopy = controlsRow.createEl("button", { cls: "clickable-icon wormhole-btn", attr: { "aria-label": "Copy Link" } });
         setIcon(btnCopy, "link");
-        btnCopy.onclick = async () => {
-            const url = this.plugin.wormholeManager.getPublicUrl(this.leafId);
-            if (url) {
-                await navigator.clipboard.writeText(url);
-                new Notice("Link copied to clipboard!");
-            }
+        btnCopy.onclick = () => {
+            void (async () => {
+                const url = this.plugin.wormholeManager.getPublicUrl(this.leafId);
+                if (url) {
+                    await navigator.clipboard.writeText(url);
+                    new Notice("Link copied to clipboard!");
+                }
+            })();
         };
 
         // Toggle Lock
@@ -73,7 +75,7 @@ export class WormholeOverlay {
         });
         setIcon(btnLock, isProtected ? "lock" : "unlock");
         btnLock.onclick = () => {
-            this.plugin.wormholeManager.toggleAntiCopy(this.leafId);
+            void this.plugin.wormholeManager.toggleAntiCopy(this.leafId);
             // Refresh will happen via Manager calling back, or we can force it here for responsiveness?
             // Manager calls refreshAll -> we need a way to hook into that.
             // For now, Manager updates TabHeader, but maybe not this Overlay explicitly yet.
@@ -85,7 +87,7 @@ export class WormholeOverlay {
         const btnStop = controlsRow.createEl("button", { cls: "clickable-icon wormhole-btn is-danger", attr: { "aria-label": "Stop Sharing" } });
         setIcon(btnStop, "square");
         btnStop.onclick = () => {
-            this.plugin.wormholeManager.stopSharing(this.leafId);
+            void this.plugin.wormholeManager.stopSharing(this.leafId);
         };
     }
 

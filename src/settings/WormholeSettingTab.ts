@@ -23,7 +23,6 @@ export class WormholeSettingTab extends PluginSettingTab {
         containerEl.createEl('p', { text: '分享後的筆記將會產生一個公開的連結，您可以將該連結分享給其他人。' });
 
         const coffeeDiv = containerEl.createDiv('coffee-container');
-        coffeeDiv.style.marginBottom = '20px';
         const coffeeLink = coffeeDiv.createEl('a', { href: 'https://www.buymeacoffee.com/whoami885' });
         coffeeLink.createEl('img', {
             attr: {
@@ -33,7 +32,7 @@ export class WormholeSettingTab extends PluginSettingTab {
         });
 
         new Setting(containerEl)
-            .setName('Security & Protection')
+            .setName('Security & protection')
             .setHeading();
 
         new Setting(containerEl)
@@ -41,9 +40,9 @@ export class WormholeSettingTab extends PluginSettingTab {
             .setDesc('If enabled, visitors cannot select text or use context menu (Anti-Copy Mode).')
             .addToggle(toggle => toggle
                 .setValue(this.plugin.settings.preventSelection)
-                .onChange(async (value) => {
+                .onChange((value) => {
                     this.plugin.settings.preventSelection = value;
-                    await this.plugin.saveSettings();
+                    void this.plugin.saveSettings();
                 }));
 
         new Setting(containerEl)
@@ -58,9 +57,9 @@ export class WormholeSettingTab extends PluginSettingTab {
                 .addOption('light', 'Light')
                 .addOption('dark', 'Dark')
                 .setValue(this.plugin.settings.themeMode)
-                .onChange(async (value) => {
+                .onChange((value) => {
                     this.plugin.settings.themeMode = value as 'auto' | 'light' | 'dark';
-                    await this.plugin.saveSettings();
+                    void this.plugin.saveSettings();
                 }));
 
         // Future feature

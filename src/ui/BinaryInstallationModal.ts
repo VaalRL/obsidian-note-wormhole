@@ -18,7 +18,7 @@ export class BinaryInstallationModal extends Modal {
         const { contentEl } = this;
         contentEl.empty();
 
-        contentEl.createEl('h2', { text: 'Enable Cloudflare Tunnel ⚡' });
+        contentEl.createEl('h2', { text: 'Enable Cloudflare tunnel ⚡' });
 
         contentEl.createEl('p', { text: 'Note Wormhole uses Cloudflare Tunnel to check exposure of your local server to the internet.' });
         contentEl.createEl('p', { text: 'To proceed, we need to download and install the lightweight Cloudflare Tunnel binary (cloudflared) from GitHub. This is a one-time setup.' });
@@ -28,11 +28,7 @@ export class BinaryInstallationModal extends Modal {
             cls: 'setting-item-description'
         });
 
-        const buttonContainer = contentEl.createDiv();
-        buttonContainer.style.display = 'flex';
-        buttonContainer.style.justifyContent = 'flex-end';
-        buttonContainer.style.gap = '10px';
-        buttonContainer.style.marginTop = '20px';
+        const buttonContainer = contentEl.createDiv({ cls: 'wormhole-modal-buttons' });
 
         const cancelBtn = buttonContainer.createEl('button', { text: 'Cancel' });
         cancelBtn.onclick = () => {
@@ -40,9 +36,9 @@ export class BinaryInstallationModal extends Modal {
             this.close();
         };
 
-        const confirmBtn = buttonContainer.createEl('button', { text: 'Agree & Install', cls: 'mod-cta' });
+        const confirmBtn = buttonContainer.createEl('button', { text: 'Agree & install', cls: 'mod-cta' });
         confirmBtn.onclick = () => {
-            this.onAccept();
+            void this.onAccept();
             this.close();
         };
     }
