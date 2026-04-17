@@ -25,7 +25,7 @@ export class WormholeLauncherModal extends FuzzySuggestModal<TabChoice> {
 
         this.app.workspace.iterateAllLeaves((leaf) => {
             if (leaf.view instanceof MarkdownView && leaf.view.file) {
-                const leafId = (leaf as any).id;
+                const leafId = leaf.id;
                 choices.push({
                     leaf: leaf,
                     file: leaf.view.file.path,
@@ -55,8 +55,7 @@ export class WormholeLauncherModal extends FuzzySuggestModal<TabChoice> {
 
         if (item.isActive) {
             const aux = el.createDiv({ cls: "suggestion-aux" });
-            aux.createSpan({ cls: "suggestion-flair", text: "LIVE" })
-                .style.color = "var(--color-accent)";
+            aux.createSpan({ cls: "suggestion-flair wormhole-live-badge", text: "LIVE" });
         }
 
         // Optionally highlight the matched characters
@@ -73,12 +72,12 @@ export class WormholeLauncherModal extends FuzzySuggestModal<TabChoice> {
 
     onChooseItem(item: TabChoice, evt: MouseEvent | KeyboardEvent): void {
         const view = item.leaf.view as MarkdownView;
-        const leafId = (item.leaf as any).id;
+        const leafId = item.leaf.id;
 
         if (item.isActive) {
             // If already active, maybe ask to stop? Or just show info?
             // For now, let's just re-copy the link logic which happens in startSharing check
-            this.manager.startSharing(leafId, "", ""); // Manager handles caching check
+            void this.manager.startSharing(leafId, "", ""); // Manager handles caching check
         } else {
             const content = view.getViewData();
             const filePath = view.file!.path;

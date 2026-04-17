@@ -5,6 +5,7 @@ import { WormholeManager } from './src/services/WormholeManager';
 import { WormholeLauncherModal } from './src/ui/WormholeLauncherModal';
 import { WelcomeModal } from './src/ui/WelcomeModal';
 import { TabHeaderDecorator } from './src/ui/TabHeaderDecorator';
+import './src/types';
 
 export default class NoteWormholePlugin extends Plugin {
     settings: WormholeSettings = null!;
@@ -13,8 +14,6 @@ export default class NoteWormholePlugin extends Plugin {
     statusBarItem: HTMLElement | null = null;
 
     async onload() {
-        console.log('Loading Note Wormhole Plugin');
-
         await this.loadSettings();
 
         // Check for First Run
@@ -63,8 +62,8 @@ export default class NoteWormholePlugin extends Plugin {
                         const content = activeView.getViewData();
                         const filePath = activeView.file?.path || 'Untitled';
                         // Use leaf ID for session tracking
-                        const leafId = (activeView.leaf as any).id;
-                        this.wormholeManager.startSharing(leafId, content, filePath);
+                        const leafId = activeView.leaf.id;
+                        void this.wormholeManager.startSharing(leafId, content, filePath);
                     }
                     return true;
                 }
@@ -79,11 +78,11 @@ export default class NoteWormholePlugin extends Plugin {
             checkCallback: (checking: boolean) => {
                 const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
                 if (activeView) {
-                    const leafId = (activeView.leaf as any).id;
+                    const leafId = activeView.leaf.id;
                     const isSharing = this.wormholeManager.isSharing(leafId);
 
                     if (!checking && isSharing) {
-                        this.wormholeManager.stopSharing(leafId);
+                        void this.wormholeManager.stopSharing(leafId);
                     }
                     // Only show command if it's currently sharing
                     return isSharing;
@@ -94,8 +93,6 @@ export default class NoteWormholePlugin extends Plugin {
     }
 
     onunload() {
-        // Cleanup
-        console.log('Unloading Note Wormhole Plugin');
         this.wormholeManager?.unload();
     }
 

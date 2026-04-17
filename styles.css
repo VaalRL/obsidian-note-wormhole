@@ -4,6 +4,32 @@
     /* For Tab UI later */
 }
 
+/* Tab header status indicator */
 .wormhole-status-icon {
-    /* Status dot */
+    font-size: 0.6em;
+    margin-right: 4px;
+    cursor: pointer;
+}
+
+.wormhole-status-icon:focus-visible {
+    outline: 2px solid var(--interactive-accent);
+    outline-offset: 2px;
+}
+
+/* Settings page spacing */
+.coffee-container {
+    margin-bottom: 20px;
+}
+
+/* "LIVE" badge in launcher modal */
+.wormhole-live-badge {
+    color: var(--color-accent);
+}
+
+/* Button row in binary installation modal */
+.wormhole-modal-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
 }

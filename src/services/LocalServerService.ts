@@ -20,7 +20,7 @@ export class LocalServerService {
      * @param htmlContent The initial HTML content to serve
      * @returns The port number
      */
-    async start(htmlContent: string): Promise<number> {
+    start(htmlContent: string): Promise<number> {
         this.currentHtml = htmlContent;
         this.activeViewers.clear();
 
