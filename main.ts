@@ -29,6 +29,15 @@ export default class NoteWormholePlugin extends Plugin {
 
         // 2. Initialize Status Bar
         this.statusBarItem = this.addStatusBarItem();
+        this.statusBarItem.onClickEvent(() => {
+            const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+            if (activeView) {
+                const content = activeView.getViewData();
+                const filePath = activeView.file?.path || 'Untitled';
+                const leafId = activeView.leaf.id;
+                void this.wormholeManager.startSharing(leafId, content, filePath);
+            }
+        });
         this.updateStatusBar();
 
         // 3. Register Settings Tab
