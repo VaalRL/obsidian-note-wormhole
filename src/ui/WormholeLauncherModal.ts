@@ -15,8 +15,8 @@ export class WormholeLauncherModal extends FuzzySuggestModal<TabChoice> {
         this.manager = manager;
         this.setPlaceholder("Select a tab to trigger Wormhole tunneling...");
         this.setInstructions([
-            { command: "↵", purpose: "to toggle wormhole" },
-            { command: "esc", purpose: "to dismiss" },
+            { command: "enter", purpose: "start or stop sharing for the selected tab" },
+            { command: "esc", purpose: "dismiss" },
         ]);
     }
 
@@ -69,22 +69,23 @@ export class WormholeLauncherModal extends FuzzySuggestModal<TabChoice> {
         return parts[parts.length - 1];
     }
 
-
-    onChooseItem(item: TabChoice, evt: MouseEvent | KeyboardEvent): void {
+    onChooseItem(item: TabChoice): void {
         const view = item.leaf.view as MarkdownView;
         const leafId = item.leaf.id;
+        const isSharing = this.manager.isSharing(leafId);
 
-        if (item.isActive) {
-            // If already active, maybe ask to stop? Or just show info?
-            // For now, let's just re-copy the link logic which happens in startSharing check
-            void this.manager.startSharing(leafId, "", ""); // Manager handles caching check
-        } else {
-            const content = view.getViewData();
-            const filePath = view.file!.path;
-
-            // Trigger sharing
-            this.manager.startSharing(leafId, content, filePath)
-                .catch(err => console.error("Failed to start wormhole from modal", err));
+        if (isSharing) {
+            void this.manager.stopSharing(leafId).catch((err) => {
+                console.error("Failed to stop wormhole from modal", err);
+            });
+            return;
         }
+
+        const content = view.getViewData();
+        const filePath = view.file?.path || "Untitled";
+
+        void this.manager.startSharing(leafId, content, filePath).catch((err) => {
+            console.error("Failed to start wormhole from modal", err);
+        });
     }
 }
