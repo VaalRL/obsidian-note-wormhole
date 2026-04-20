@@ -1,4 +1,4 @@
-import { Plugin, MarkdownView } from 'obsidian';
+import { Plugin, MarkdownView, Notice } from 'obsidian';
 import { WormholeSettingTab } from './src/settings/WormholeSettingTab';
 import { WormholeSettings, DEFAULT_SETTINGS } from './src/settings/WormholeSettings';
 import { WormholeManager } from './src/services/WormholeManager';
@@ -30,13 +30,9 @@ export default class NoteWormholePlugin extends Plugin {
         // 2. Initialize Status Bar
         this.statusBarItem = this.addStatusBarItem();
         this.statusBarItem.onClickEvent(() => {
-            const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
-            if (activeView) {
-                const content = activeView.getViewData();
-                const filePath = activeView.file?.path || 'Untitled';
-                const leafId = activeView.leaf.id;
-                void this.wormholeManager.startSharing(leafId, content, filePath);
-            }
+            void this.toggleActiveWormholeFromStatusBar().catch((error) => {
+                console.error('Failed to toggle wormhole from status bar', error);
+            });
         });
         this.updateStatusBar();
 
@@ -50,14 +46,17 @@ export default class NoteWormholePlugin extends Plugin {
         }, 3000));
 
         // Ribbon Icon
-        this.addRibbonIcon('radio-tower', 'Wormhole Launcher', (evt: MouseEvent) => {
+        this.addRibbonIcon('radio-tower', 'Wormhole Launcher', () => {
             new WormholeLauncherModal(this.app, this.wormholeManager).open();
         });
 
         // Register Decorator Updates & Status Bar Updates
         this.registerEvent(this.app.workspace.on('layout-change', () => {
             this.tabDecorator.refreshAll();
-            // We can also check status bar here if needed, but Manager usually triggers it
+            this.updateStatusBar();
+        }));
+        this.registerEvent(this.app.workspace.on('active-leaf-change', () => {
+            this.updateStatusBar();
         }));
 
         // Command: Start Wormhole for Active File
@@ -70,7 +69,6 @@ export default class NoteWormholePlugin extends Plugin {
                     if (!checking) {
                         const content = activeView.getViewData();
                         const filePath = activeView.file?.path || 'Untitled';
-                        // Use leaf ID for session tracking
                         const leafId = activeView.leaf.id;
                         void this.wormholeManager.startSharing(leafId, content, filePath);
                     }
@@ -93,7 +91,6 @@ export default class NoteWormholePlugin extends Plugin {
                     if (!checking && isSharing) {
                         void this.wormholeManager.stopSharing(leafId);
                     }
-                    // Only show command if it's currently sharing
                     return isSharing;
                 }
                 return false;
@@ -113,18 +110,59 @@ export default class NoteWormholePlugin extends Plugin {
         await this.saveData(this.settings);
     }
 
+    private async toggleActiveWormholeFromStatusBar() {
+        const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+        if (!activeView) {
+            new Notice('Open a note tab to toggle Wormhole.');
+            return;
+        }
+
+        const leafId = activeView.leaf.id;
+        if (this.wormholeManager.isSharing(leafId)) {
+            await this.wormholeManager.stopSharing(leafId);
+            return;
+        }
+
+        const content = activeView.getViewData();
+        const filePath = activeView.file?.path || 'Untitled';
+        await this.wormholeManager.startSharing(leafId, content, filePath);
+    }
+
     updateStatusBar() {
         if (!this.statusBarItem) return;
 
-        const count = this.wormholeManager.getActiveSessionCount();
-        if (count > 0) {
-            this.statusBarItem.setText(`🌌 ${count} Active`);
+        const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+        const activeLeafId = activeView?.leaf.id;
+        const activeSessionCount = this.wormholeManager.getActiveSessionCount();
+        const isActiveLeafSharing = activeLeafId
+            ? this.wormholeManager.isSharing(activeLeafId)
+            : false;
+
+        if (isActiveLeafSharing) {
+            this.statusBarItem.setText('Wormhole Active');
             this.statusBarItem.removeClass('wormhole-status-empty');
             this.statusBarItem.addClass('wormhole-status-active');
-        } else {
-            this.statusBarItem.setText('🌌 Wormhole Ready');
+            this.statusBarItem.title = activeSessionCount > 1
+                ? `Click to stop sharing this note (${activeSessionCount} total active)`
+                : 'Click to stop sharing this note';
+            return;
+        }
+
+        if (activeSessionCount > 0) {
+            this.statusBarItem.setText(`Wormhole Ready | ${activeSessionCount} Active`);
             this.statusBarItem.removeClass('wormhole-status-active');
             this.statusBarItem.addClass('wormhole-status-empty');
+            this.statusBarItem.title = activeView
+                ? 'Click to share this note'
+                : `${activeSessionCount} shared note${activeSessionCount === 1 ? '' : 's'} active`;
+            return;
         }
+
+        this.statusBarItem.setText('Wormhole Ready');
+        this.statusBarItem.removeClass('wormhole-status-active');
+        this.statusBarItem.addClass('wormhole-status-empty');
+        this.statusBarItem.title = activeView
+            ? 'Click to share this note'
+            : 'Open a note to share it';
     }
 }
