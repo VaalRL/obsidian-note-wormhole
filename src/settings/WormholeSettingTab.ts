@@ -1,5 +1,6 @@
 import { App, PluginSettingTab, Setting } from 'obsidian';
 import NoteWormholePlugin from '../../main';
+import { ThemeMode } from './WormholeSettings';
 
 export class WormholeSettingTab extends PluginSettingTab {
     plugin: NoteWormholePlugin;
@@ -14,30 +15,13 @@ export class WormholeSettingTab extends PluginSettingTab {
 
         containerEl.empty();
 
-        // Usage Instructions
         new Setting(containerEl)
-            .setName('使用說明')
-            .setHeading();
-
-        containerEl.createEl('p', { text: '在任何筆記中，打開命令面板 (Ctrl/Cmd + P) 搜尋 "Wormhole" 即可將筆記分享到網路上。' });
-        containerEl.createEl('p', { text: '分享後的筆記將會產生一個公開的連結，您可以將該連結分享給其他人。' });
-
-        const coffeeDiv = containerEl.createDiv('coffee-container');
-        const coffeeLink = coffeeDiv.createEl('a', { href: 'https://www.buymeacoffee.com/whoami885' });
-        coffeeLink.createEl('img', {
-            attr: {
-                src: 'https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=&slug=whoami885&button_colour=BD5FFF&font_colour=ffffff&font_family=Poppins&outline_colour=000000&coffee_colour=FFDD00',
-                alt: 'Buy Me A Coffee'
-            }
-        });
-
-        new Setting(containerEl)
-            .setName('Security & protection')
+            .setName('Security and protection')
             .setHeading();
 
         new Setting(containerEl)
             .setName('Prevent text selection')
-            .setDesc('If enabled, visitors cannot select text or use context menu (Anti-Copy Mode).')
+            .setDesc('Visitors cannot select text or open the context menu on the shared page. This discourages casual copying; it does not stop a determined reader.')
             .addToggle(toggle => toggle
                 .setValue(this.plugin.settings.preventSelection)
                 .onChange((value) => {
@@ -51,22 +35,30 @@ export class WormholeSettingTab extends PluginSettingTab {
 
         new Setting(containerEl)
             .setName('Theme mode')
-            .setDesc('Choose how the shared note looks to visitors.')
+            .setDesc('Colour scheme visitors see on the shared page.')
             .addDropdown(dropdown => dropdown
-                .addOption('auto', 'Auto (Match System)')
+                .addOption('auto', 'Auto (match visitor system)')
                 .addOption('light', 'Light')
                 .addOption('dark', 'Dark')
                 .setValue(this.plugin.settings.themeMode)
                 .onChange((value) => {
-                    this.plugin.settings.themeMode = value as 'auto' | 'light' | 'dark';
+                    this.plugin.settings.themeMode = value as ThemeMode;
                     void this.plugin.saveSettings();
                 }));
 
-        // Future feature
-        /*
         new Setting(containerEl)
-            .setName('Show watermark')
-            .addToggle(...)
-        */
+            .setName('Tunnel')
+            .setHeading();
+
+        new Setting(containerEl)
+            .setName('Cloudflare tunnel component')
+            .setDesc('Sharing requires the cloudflared binary, downloaded once on first use. Reset this to be asked for permission again.')
+            .addButton(button => button
+                .setButtonText('Reset permission')
+                .setDisabled(!this.plugin.settings.hasAcceptedTunnelTerms)
+                .onClick(() => {
+                    this.plugin.settings.hasAcceptedTunnelTerms = false;
+                    void this.plugin.saveSettings().then(() => this.display());
+                }));
     }
 }

@@ -2,9 +2,10 @@
 	"id": "note-wormhole",
 	"name": "Note Wormhole",
 	"version": "1.0.0",
-	"minAppVersion": "0.15.0",
+	"minAppVersion": "1.5.0",
 	"description": "Instantly share your notes via a secure, temporary, local wormhole. No cloud upload.",
 	"author": "Antigravity",
-	"authorUrl": "https://github.com/obsidian-note-wormhole/obsidian-note-wormhole",
+	"authorUrl": "https://github.com/VaalRL/obsidian-note-wormhole",
+	"fundingUrl": "https://www.buymeacoffee.com/whoami885",
 	"isDesktopOnly": true
 }

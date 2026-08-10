@@ -9,23 +9,28 @@ export class WelcomeModal extends Modal {
         const { contentEl } = this;
         contentEl.empty();
 
-        contentEl.createEl('h2', { text: 'Welcome to Note Wormhole 🌌' });
+        this.setTitle('Welcome to Note Wormhole 🌌');
 
-        contentEl.createEl('p', { text: 'Turn your Obsidian into a temporary, secure web server. Share your current note instantly with a public link.' });
+        contentEl.createEl('p', { text: 'Turn your vault into a temporary, local web server. Share the note you are reading through a public link that only lives as long as you keep it open.' });
 
         const featureList = contentEl.createEl('ul');
-        featureList.createEl('li', { text: '🚀 Instant: Direct P2P-like streaming from your device.' });
-        featureList.createEl('li', { text: '👻 Ephemeral: The link dies immediately when you close the tab or Obsidian.' });
-        featureList.createEl('li', { text: '🔒 Secure: RAM-only serving. No data is ever uploaded to cloud storage.' });
+        featureList.createEl('li', { text: 'Instant: content is streamed straight from your device.' });
+        featureList.createEl('li', { text: 'Ephemeral: the link dies the moment you close the tab or quit.' });
+        featureList.createEl('li', { text: 'Private: served from memory, never uploaded to cloud storage.' });
 
         contentEl.createEl('p', {
-            text: 'To get started, click the Wormhole icon in the ribbon or use the "Start Wormhole" command.',
+            text: 'Sharing needs a one-time download of the Cloudflare tunnel component (cloudflared). You will be asked before that happens.',
+            cls: 'setting-item-description'
+        });
+
+        contentEl.createEl('p', {
+            text: 'To get started, click the wormhole icon in the ribbon or run the "Start wormhole for current note" command.',
             cls: 'setting-item-description'
         });
 
         new Setting(contentEl)
             .addButton(btn => btn
-                .setButtonText('Get Started')
+                .setButtonText('Get started')
                 .setCta()
                 .onClick(() => {
                     this.close();

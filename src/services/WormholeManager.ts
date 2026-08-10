@@ -1,4 +1,4 @@
-import { App, Notice, WorkspaceLeaf, MarkdownView } from 'obsidian';
+import { App, Notice, MarkdownView } from 'obsidian';
 import { HtmlRendererService } from './HtmlRendererService';
 import { LocalServerService } from './LocalServerService';
 import { TunnelService } from './TunnelService';
@@ -37,11 +37,11 @@ export class WormholeManager {
     }
     async startSharing(leafId: string, markdownContent: string, filePath: string): Promise<string> {
         // Check if already active
-        if (this.sessions.has(leafId)) {
-            const session = this.sessions.get(leafId)!;
-            new Notice(`Wormhole already active for this tab!\n${session.publicUrl} `);
-            await navigator.clipboard.writeText(session.publicUrl);
-            return session.publicUrl;
+        const existing = this.sessions.get(leafId);
+        if (existing) {
+            new Notice(`Wormhole already active for this tab!\n${existing.publicUrl}`);
+            await navigator.clipboard.writeText(existing.publicUrl);
+            return existing.publicUrl;
         }
 
         // CHECK: Have we accepted the binary terms?
@@ -53,13 +53,11 @@ export class WormholeManager {
                         // On Accept
                         this.plugin.settings.hasAcceptedTunnelTerms = true;
                         await this.plugin.saveSettings();
-                        // Proceed recursively or just continue?
-                        // Better to continue logic here to avoid complex recursion promises
                         this.performStartSharing(leafId, markdownContent, filePath).then(resolve).catch(reject);
                     },
                     () => {
                         // On Cancel
-                        new Notice("Wormhole cancelled: Terms not accepted.");
+                        new Notice("Wormhole cancelled: terms not accepted.");
                         reject(new Error("Terms declined"));
                     }
                 ).open();
@@ -73,14 +71,15 @@ export class WormholeManager {
         const server = new LocalServerService();
         const tunnel = new TunnelService();
 
+        // Declared outside the try block so the catch/finally path can always
+        // clear them — otherwise a failed start leaves a permanent notice on screen.
+        const startupNotice = new Notice("Opening wormhole... ⏳", 0); // Persist
+        // If it takes > 2s, it's likely downloading
+        const downloadTimer = setTimeout(() => {
+            startupNotice.setMessage("Constructing tunnel... (first run downloads components)");
+        }, 2500);
+
         try {
-            const startupNotice = new Notice("Opening Wormhole... ⏳", 0); // Persist
-
-            // If it takes > 2s, it's likely downloading
-            const downloadTimer = setTimeout(() => {
-                startupNotice.setMessage("Constructing Tunnel... (First run downloads components)");
-            }, 2500);
-
             // Initial Config
             const config: SessionConfig = {
                 preventSelection: this.plugin.settings.preventSelection
@@ -89,7 +88,8 @@ export class WormholeManager {
             // 1. Render content
             const html = await this.renderer.render(
                 markdownContent,
-                config.preventSelection
+                config.preventSelection,
+                this.plugin.settings.themeMode
             );
 
             // 2. Start Local Server
@@ -123,27 +123,23 @@ export class WormholeManager {
             this.plugin.tabDecorator.refreshAll();
             this.plugin.updateStatusBar();
 
-            clearTimeout(downloadTimer);
-            startupNotice.hide();
-            new Notice(`Wormhole Active! 🌌\nLink copied to clipboard.`);
-            // console.log(`[Wormhole] Live at: ${url} (Leaf: ${leafId})`);
+            new Notice(`Wormhole active! 🌌\nLink copied to clipboard.`);
 
             await navigator.clipboard.writeText(url);
 
             return url;
 
         } catch (e) {
-            console.error(e);
-            new Notice("Failed to open Wormhole. Check console.");
-            // Cleanup partial startup
-            // @ts-ignore
-            if (typeof downloadTimer !== 'undefined') clearTimeout(downloadTimer);
-            // @ts-ignore
-            if (typeof startupNotice !== 'undefined') startupNotice.hide();
+            console.error("[Wormhole] Failed to open wormhole", e);
+            new Notice("Failed to open wormhole. Check the developer console for details.");
 
+            // Cleanup partial startup
             await tunnel.stop();
             server.stop();
             throw e;
+        } finally {
+            clearTimeout(downloadTimer);
+            startupNotice.hide();
         }
     }
 
@@ -157,22 +153,22 @@ export class WormholeManager {
         const newSetting = !session.config.preventSelection;
         session.config.preventSelection = newSetting;
 
-        // Re-render
-        // Need to fetch current content from view?
-        // Or keep it simple: Just changing CSS doesn't need content re-read if we stored content?
-        // But LocalServerService only stores final HTML.
-        // We need to re-read Markdown.
-
+        // The server only holds the rendered HTML, so re-read the markdown from
+        // the view and re-render it with the new protection setting.
         const leaf = this.app.workspace.getLeafById(leafId);
         if (leaf && leaf.view instanceof MarkdownView) {
             const content = leaf.view.getViewData();
-            const newHtml = await this.renderer.render(content, newSetting);
+            const newHtml = await this.renderer.render(
+                content,
+                newSetting,
+                this.plugin.settings.themeMode
+            );
             session.server.updateContent(newHtml);
 
             // Update Overlay
             session.overlay?.refresh();
 
-            new Notice(`Secure Mode: ${newSetting ? 'ON 🔒' : 'OFF 🔓'} `);
+            new Notice(`Secure mode: ${newSetting ? 'on 🔒' : 'off 🔓'}`);
         }
     }
 
@@ -184,12 +180,11 @@ export class WormholeManager {
         const session = this.sessions.get(leafId);
         if (!session) return;
 
-        new Notice("Closing Wormhole... 🌑");
+        new Notice("Closing wormhole... 🌑");
 
         await session.tunnel.stop();
         session.server.stop();
 
-        // this.activeSession = null; // Removed in Phase 3 refactor
         // Destroy Overlay
         if (session.overlay) {
             session.overlay.destroy();
@@ -201,8 +196,7 @@ export class WormholeManager {
         this.plugin.tabDecorator.refreshAll();
         this.plugin.updateStatusBar();
 
-        // console.log(`[Wormhole] Closed session for Leaf: ${leafId} `);
-        new Notice("Wormhole Closed.");
+        new Notice("Wormhole closed.");
     }
 
     getPublicUrl(leafId: string): string | null {
@@ -243,8 +237,7 @@ export class WormholeManager {
 
         // Cleanup dead sessions
         for (const leafId of deadLeafIds) {
-            // console.log(`[Wormhole] Detected closed tab for active session ${leafId}. Terminating...`);
-            // We use void pattern (fire and forget) for cleanup, catching errors
+            // Fire and forget cleanup; errors are logged rather than surfaced.
             this.stopSharing(leafId).catch(err => console.error("Error closing stray wormhole", err));
         }
     }
@@ -272,11 +265,11 @@ export class WormholeManager {
     }
 
     unload() {
-        // console.log("[WormholeManager] Unloading - Closing all sessions...");
+        // onunload() is synchronous, so kick off tunnel teardown without awaiting.
         for (const leafId of this.sessions.keys()) {
-            // Force safe synchronous-like start of cleanup, but we can't await easily in unload
             const session = this.sessions.get(leafId);
             if (session) {
+                session.overlay?.destroy();
                 session.tunnel.stop().catch(e => console.error(e));
                 session.server.stop();
             }

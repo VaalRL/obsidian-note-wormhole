@@ -1,7 +1,8 @@
+export type ThemeMode = 'auto' | 'light' | 'dark';
+
 export interface WormholeSettings {
     preventSelection: boolean;
-    themeMode: 'auto' | 'light' | 'dark';
-    showWatermark: boolean;
+    themeMode: ThemeMode;
     hasSeenWelcome: boolean;
     hasAcceptedTunnelTerms: boolean;
 }
@@ -9,7 +10,6 @@ export interface WormholeSettings {
 export const DEFAULT_SETTINGS: WormholeSettings = {
     preventSelection: false,
     themeMode: 'auto',
-    showWatermark: false,
     hasSeenWelcome: false,
     hasAcceptedTunnelTerms: false
 }

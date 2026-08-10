@@ -13,7 +13,7 @@ export class WormholeLauncherModal extends FuzzySuggestModal<TabChoice> {
     constructor(app: App, manager: WormholeManager) {
         super(app);
         this.manager = manager;
-        this.setPlaceholder("Select a tab to trigger Wormhole tunneling...");
+        this.setPlaceholder("Select a tab to share through a wormhole...");
         this.setInstructions([
             { command: "enter", purpose: "start or stop sharing for the selected tab" },
             { command: "esc", purpose: "dismiss" },
@@ -57,11 +57,6 @@ export class WormholeLauncherModal extends FuzzySuggestModal<TabChoice> {
             const aux = el.createDiv({ cls: "suggestion-aux" });
             aux.createSpan({ cls: "suggestion-flair wormhole-live-badge", text: "LIVE" });
         }
-
-        // Optionally highlight the matched characters
-        // super.renderSuggestion(match, el) usually does this, but since we custom render,
-        // we might lose highlighting unless we implement it.
-        // For now, let's just stick to the requested UI structure. Highlighting in complex mode is tricky.
     }
 
     private getBasename(path: string): string {

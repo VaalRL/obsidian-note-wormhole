@@ -1,4 +1,4 @@
-import { Plugin, MarkdownView, Notice } from 'obsidian';
+import { Plugin, MarkdownView, Notice, setTooltip } from 'obsidian';
 import { WormholeSettingTab } from './src/settings/WormholeSettingTab';
 import { WormholeSettings, DEFAULT_SETTINGS } from './src/settings/WormholeSettings';
 import { WormholeManager } from './src/services/WormholeManager';
@@ -8,17 +8,21 @@ import { TabHeaderDecorator } from './src/ui/TabHeaderDecorator';
 import './src/types';
 
 export default class NoteWormholePlugin extends Plugin {
-    settings: WormholeSettings = null!;
-    wormholeManager: WormholeManager = null!;
-    tabDecorator: TabHeaderDecorator = null!;
+    // Assigned in onload(), before any consumer can reach them.
+    settings!: WormholeSettings;
+    wormholeManager!: WormholeManager;
+    tabDecorator!: TabHeaderDecorator;
     statusBarItem: HTMLElement | null = null;
 
     async onload() {
         await this.loadSettings();
 
-        // Check for First Run
+        // First run: show the welcome modal once the workspace is ready, so we
+        // never block or interrupt plugin startup.
         if (!this.settings.hasSeenWelcome) {
-            new WelcomeModal(this.app).open();
+            this.app.workspace.onLayoutReady(() => {
+                new WelcomeModal(this.app).open();
+            });
             this.settings.hasSeenWelcome = true;
             await this.saveSettings();
         }
@@ -46,7 +50,7 @@ export default class NoteWormholePlugin extends Plugin {
         }, 3000));
 
         // Ribbon Icon
-        this.addRibbonIcon('radio-tower', 'Wormhole Launcher', () => {
+        this.addRibbonIcon('radio-tower', 'Open wormhole launcher', () => {
             new WormholeLauncherModal(this.app, this.wormholeManager).open();
         });
 
@@ -62,7 +66,7 @@ export default class NoteWormholePlugin extends Plugin {
         // Command: Start Wormhole for Active File
         this.addCommand({
             id: 'start-wormhole-current',
-            name: 'Start Wormhole for current note',
+            name: 'Start wormhole for current note',
             checkCallback: (checking: boolean) => {
                 const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
                 if (activeView) {
@@ -70,7 +74,10 @@ export default class NoteWormholePlugin extends Plugin {
                         const content = activeView.getViewData();
                         const filePath = activeView.file?.path || 'Untitled';
                         const leafId = activeView.leaf.id;
-                        void this.wormholeManager.startSharing(leafId, content, filePath);
+                        void this.wormholeManager.startSharing(leafId, content, filePath)
+                            .catch((error) => {
+                                console.error('[Wormhole] Failed to start sharing', error);
+                            });
                     }
                     return true;
                 }
@@ -81,7 +88,7 @@ export default class NoteWormholePlugin extends Plugin {
         // Command: Stop Wormhole
         this.addCommand({
             id: 'stop-wormhole',
-            name: 'Stop current Wormhole',
+            name: 'Stop current wormhole',
             checkCallback: (checking: boolean) => {
                 const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
                 if (activeView) {
@@ -89,7 +96,9 @@ export default class NoteWormholePlugin extends Plugin {
                     const isSharing = this.wormholeManager.isSharing(leafId);
 
                     if (!checking && isSharing) {
-                        void this.wormholeManager.stopSharing(leafId);
+                        void this.wormholeManager.stopSharing(leafId).catch((error) => {
+                            console.error('[Wormhole] Failed to stop sharing', error);
+                        });
                     }
                     return isSharing;
                 }
@@ -113,7 +122,7 @@ export default class NoteWormholePlugin extends Plugin {
     private async toggleActiveWormholeFromStatusBar() {
         const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
         if (!activeView) {
-            new Notice('Open a note tab to toggle Wormhole.');
+            new Notice('Open a note tab to toggle the wormhole.');
             return;
         }
 
@@ -139,30 +148,30 @@ export default class NoteWormholePlugin extends Plugin {
             : false;
 
         if (isActiveLeafSharing) {
-            this.statusBarItem.setText('Wormhole Active');
+            this.statusBarItem.setText('Wormhole active');
             this.statusBarItem.removeClass('wormhole-status-empty');
             this.statusBarItem.addClass('wormhole-status-active');
-            this.statusBarItem.title = activeSessionCount > 1
+            setTooltip(this.statusBarItem, activeSessionCount > 1
                 ? `Click to stop sharing this note (${activeSessionCount} total active)`
-                : 'Click to stop sharing this note';
+                : 'Click to stop sharing this note');
             return;
         }
 
         if (activeSessionCount > 0) {
-            this.statusBarItem.setText(`Wormhole Ready | ${activeSessionCount} Active`);
+            this.statusBarItem.setText(`Wormhole ready | ${activeSessionCount} active`);
             this.statusBarItem.removeClass('wormhole-status-active');
             this.statusBarItem.addClass('wormhole-status-empty');
-            this.statusBarItem.title = activeView
+            setTooltip(this.statusBarItem, activeView
                 ? 'Click to share this note'
-                : `${activeSessionCount} shared note${activeSessionCount === 1 ? '' : 's'} active`;
+                : `${activeSessionCount} shared note${activeSessionCount === 1 ? '' : 's'} active`);
             return;
         }
 
-        this.statusBarItem.setText('Wormhole Ready');
+        this.statusBarItem.setText('Wormhole ready');
         this.statusBarItem.removeClass('wormhole-status-active');
         this.statusBarItem.addClass('wormhole-status-empty');
-        this.statusBarItem.title = activeView
+        setTooltip(this.statusBarItem, activeView
             ? 'Click to share this note'
-            : 'Open a note to share it';
+            : 'Open a note to share it');
     }
 }

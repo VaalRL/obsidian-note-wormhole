@@ -18,29 +18,31 @@ export class BinaryInstallationModal extends Modal {
         const { contentEl } = this;
         contentEl.empty();
 
-        contentEl.createEl('h2', { text: 'Enable Cloudflare tunnel ⚡' });
+        this.setTitle('Enable Cloudflare tunnel ⚡');
 
-        contentEl.createEl('p', { text: 'Note Wormhole uses Cloudflare Tunnel to check exposure of your local server to the internet.' });
-        contentEl.createEl('p', { text: 'To proceed, we need to download and install the lightweight Cloudflare Tunnel binary (cloudflared) from GitHub. This is a one-time setup.' });
+        contentEl.createEl('p', { text: 'Note Wormhole exposes a local server on your machine through a Cloudflare quick tunnel, so the people you share with can reach it.' });
+        contentEl.createEl('p', { text: 'To do that it needs to download and run the Cloudflare tunnel binary (cloudflared) from Cloudflare’s official GitHub releases. This is a one-time setup.' });
+        contentEl.createEl('p', { text: 'The tunnel is provided by Cloudflare and is subject to their terms. Nothing is uploaded to Cloudflare storage — traffic is relayed to your machine while the session is open.' });
 
         contentEl.createEl('p', {
-            text: 'Do you agree to the terms and wish to install the binary?',
+            text: 'Download and install the tunnel component now?',
             cls: 'setting-item-description'
         });
 
-        const buttonContainer = contentEl.createDiv({ cls: 'wormhole-modal-buttons' });
-
-        const cancelBtn = buttonContainer.createEl('button', { text: 'Cancel' });
-        cancelBtn.onclick = () => {
-            this.onCancel();
-            this.close();
-        };
-
-        const confirmBtn = buttonContainer.createEl('button', { text: 'Agree & install', cls: 'mod-cta' });
-        confirmBtn.onclick = () => {
-            void this.onAccept();
-            this.close();
-        };
+        new Setting(contentEl)
+            .addButton(btn => btn
+                .setButtonText('Cancel')
+                .onClick(() => {
+                    this.onCancel();
+                    this.close();
+                }))
+            .addButton(btn => btn
+                .setButtonText('Agree and install')
+                .setCta()
+                .onClick(() => {
+                    this.onAccept();
+                    this.close();
+                }));
     }
 
     onClose() {

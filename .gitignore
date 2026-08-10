@@ -6,8 +6,9 @@ package-lock.json
 yarn.lock
 yarn-error.log
 
-# Build artifacts
+# Build artifacts (published as GitHub release assets, not committed)
 main.js
+main.js.map
 # styles.css is source, so we keep it. If you used SCSS, you'd ignore the output css.
 
 # OS generated files
@@ -18,20 +19,20 @@ Thumbs.db
 .idea/
 .vscode/
 
-# Testing & Development
+# Test vaults (may contain plugin data files with API keys / certificates)
 Test Vault/
 test-vault/
+Note Wormhole/
+**/.obsidian/
 
-# AI & Agent Context (Private/Local)
+# AI & Agent local state (Private/Local)
 .claude/
-claude/
 .gemini/
-CLAUDE.md
-gemini.md
 .mcp.json
+
+# Unrelated side projects — do not ship in the plugin repo
 obsidian-mcp-monitor/
 Browser Extensions/
 
 # Local Tasks/Docs
 todo.md
-OBSIDIAN_PLUGIN_DEVELOPMENT_RULES.md

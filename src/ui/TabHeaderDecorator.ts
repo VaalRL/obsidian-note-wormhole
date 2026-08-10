@@ -1,4 +1,4 @@
-import { WorkspaceLeaf, setIcon, Menu, Notice } from "obsidian";
+import { WorkspaceLeaf, Menu, Notice, setTooltip } from "obsidian";
 import NoteWormholePlugin from "../../main";
 
 /**
@@ -52,18 +52,21 @@ export class TabHeaderDecorator {
                 // Update state (Green dot)
                 const viewerCount = this.plugin.wormholeManager.getViewerCount(leafId);
                 statusEl.textContent = '🟢';
-                const countText = viewerCount > 0 ? ` (${viewerCount} Viewers)` : '';
-                statusEl.setAttribute('aria-label', `Wormhole active${countText} — click for options`);
-                statusEl.setAttribute('title', `Wormhole Active${countText} (Click for Menu)`);
+                const countText = viewerCount > 0
+                    ? ` (${viewerCount} viewer${viewerCount === 1 ? '' : 's'})`
+                    : '';
+                const label = `Wormhole active${countText} — click for options`;
+                statusEl.setAttribute('aria-label', label);
+                setTooltip(statusEl, label);
 
-                // Click Listener for Context Menu (F-09)
-                statusEl.onclick = (e: MouseEvent) => {
-                    e.stopPropagation(); // Prevent tab switching
+                // Context menu (F-09), reachable by both mouse and keyboard.
+                const anchorEl = statusEl;
+                const buildMenu = (): Menu => {
                     const menu = new Menu();
 
                     menu.addItem((item) =>
                         item
-                            .setTitle("Status: Live 🟢")
+                            .setTitle("Status: live 🟢")
                             .setDisabled(true)
                     );
 
@@ -92,7 +95,10 @@ export class TabHeaderDecorator {
                             .setTitle(isProtected ? "Unlock selection (allow copy)" : "Prevent selection (anti-copy)")
                             .setIcon(isProtected ? "unlock" : "lock")
                             .onClick(() => {
-                                void this.plugin.wormholeManager.toggleAntiCopy(leafId);
+                                void this.plugin.wormholeManager.toggleAntiCopy(leafId)
+                                    .catch((error) => {
+                                        console.error('[Wormhole] Failed to toggle protection', error);
+                                    });
                             })
                     );
 
@@ -104,11 +110,27 @@ export class TabHeaderDecorator {
                             .setIcon("square")
                             .setWarning(true)
                             .onClick(() => {
-                                void this.plugin.wormholeManager.stopSharing(leafId);
+                                void this.plugin.wormholeManager.stopSharing(leafId)
+                                    .catch((error) => {
+                                        console.error('[Wormhole] Failed to stop sharing', error);
+                                    });
                             })
                     );
 
-                    menu.showAtMouseEvent(e);
+                    return menu;
+                };
+
+                statusEl.onclick = (e: MouseEvent) => {
+                    e.stopPropagation(); // Prevent tab switching
+                    buildMenu().showAtMouseEvent(e);
+                };
+
+                statusEl.onkeydown = (e: KeyboardEvent) => {
+                    if (e.key !== 'Enter' && e.key !== ' ') return;
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const rect = anchorEl.getBoundingClientRect();
+                    buildMenu().showAtPosition({ x: rect.left, y: rect.bottom });
                 };
             } else {
                 // Remove if exists

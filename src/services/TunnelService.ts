@@ -2,7 +2,7 @@ import { startTunnel, Tunnel } from "untun";
 
 /**
  * TunnelService
- * 
+ *
  * Manages the Cloudflare Tunnel using the 'untun' library.
  * This exposes the local localhost server to the public internet securely.
  */
@@ -18,28 +18,25 @@ export class TunnelService {
      */
     async start(localPort: number, options?: { acceptCloudflareNotice?: boolean }): Promise<string> {
         if (this.tunnel) {
-            return this.url! || "";
+            return this.url ?? "";
         }
 
-        // console.log(`[Wormhole] Starting tunnel for port ${localPort}...`);
-
         try {
+            // untun defaults to Cloudflare Quick Tunnels, which need no account.
             this.tunnel = await startTunnel({
                 port: localPort,
                 acceptCloudflareNotice: options?.acceptCloudflareNotice
-                // We use 'tryflare' (Cloudflare Quick Tunnels) by default with untun
             }) || null;
 
-            if (this.tunnel) {
-                this.url = await this.tunnel.getURL();
-                // console.log(`[Wormhole] Tunnel established at ${this.url}`);
-                return this.url;
-            } else {
-                throw new Error("Tunnel failed to start: Object is null");
+            if (!this.tunnel) {
+                throw new Error("Tunnel failed to start: untun returned no tunnel");
             }
+
+            this.url = await this.tunnel.getURL();
+            return this.url;
         } catch (error) {
             console.error("[Wormhole] Failed to start tunnel:", error);
-            this.stop(); // Cleanup partial state
+            await this.stop(); // Cleanup partial state
             throw error;
         }
     }
@@ -48,12 +45,16 @@ export class TunnelService {
      * Stops the current tunnel.
      */
     async stop() {
-        if (this.tunnel) {
-            // console.log("[Wormhole] Closing tunnel...");
-            await this.tunnel.close();
-            this.tunnel = null;
-            this.url = null;
-            // console.log("[Wormhole] Tunnel closed");
+        if (!this.tunnel) return;
+
+        const tunnel = this.tunnel;
+        this.tunnel = null;
+        this.url = null;
+
+        try {
+            await tunnel.close();
+        } catch (error) {
+            console.error("[Wormhole] Failed to close tunnel cleanly:", error);
         }
     }
 

@@ -1,10 +1,7 @@
 /* Note Wormhole Styles */
 
-.nav-files-header-toolbar {
-    /* For Tab UI later */
-}
+/* --- Tab header status indicator (F-08) --- */
 
-/* Tab header status indicator */
 .wormhole-status-icon {
     font-size: 0.6em;
     margin-right: 4px;
@@ -16,20 +13,67 @@
     outline-offset: 2px;
 }
 
-/* Settings page spacing */
-.coffee-container {
-    margin-bottom: 20px;
+/* --- Status bar item (F-06) --- */
+
+.wormhole-status-active {
+    color: var(--text-success, var(--interactive-accent));
 }
 
-/* "LIVE" badge in launcher modal */
+.wormhole-status-empty {
+    color: var(--text-muted);
+}
+
+/* --- Launcher modal (F-01) --- */
+
 .wormhole-live-badge {
     color: var(--color-accent);
 }
 
-/* Button row in binary installation modal */
-.wormhole-modal-buttons {
+/* --- Floating control panel (F-11) --- */
+
+.wormhole-overlay {
+    position: absolute;
+    right: 24px;
+    bottom: 24px;
+    z-index: var(--layer-popover, 30);
     display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-    margin-top: 20px;
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px 10px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-m, 8px);
+    background-color: var(--background-secondary);
+    box-shadow: var(--shadow-s);
+}
+
+.wormhole-overlay-header {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: var(--font-ui-smaller);
+    color: var(--text-normal);
+    white-space: nowrap;
+}
+
+.wormhole-overlay-count {
+    color: var(--text-muted);
+}
+
+.wormhole-overlay-controls {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.wormhole-btn.is-active {
+    color: var(--interactive-accent);
+}
+
+.wormhole-btn.is-danger:hover {
+    color: var(--text-error);
+}
+
+.wormhole-btn:focus-visible {
+    outline: 2px solid var(--interactive-accent);
+    outline-offset: 1px;
 }
