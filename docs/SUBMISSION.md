@@ -130,11 +130,38 @@ Run against the real cloudflared release on Linux x64:
 | `stop()` awaits real process exit; port refuses afterwards | Confirmed, no orphan processes |
 | `update-cloudflared` reproduces the committed table byte-for-byte | Confirmed |
 
-**Not verified:** the live public tunnel. The development sandbox's egress policy blocks
-`api.trycloudflare.com`, so cloudflared could start but not obtain a quick tunnel. The failure
-produced a clear diagnostic rather than hanging, which exercised the error path — but an
-end-to-end share through Cloudflare should be confirmed manually before release, along with the
-overlay CSS and theme rendering inside Obsidian.
+Additionally verified inside a real Obsidian 1.9.14 desktop install (headless, driven over
+the Electron debugging protocol), with the plugin loaded from a vault:
+
+| Behaviour | Result |
+| --- | --- |
+| Plugin loads; ribbon, status bar and commands register | Confirmed |
+| Welcome modal appears on first run only, after layout is ready | Confirmed |
+| Command palette shows both commands in sentence case | Confirmed |
+| Launcher lists open tabs and flags live ones | Confirmed |
+| Settings tab resolves and reports the cloudflared status | Confirmed |
+| Consent dialog shows the real URL, version, SHA-256, size and install path | Confirmed |
+| Shared page renders through the real renderer and local server | Confirmed |
+| Theme mode drives the visitor's colour scheme | Confirmed, light and dark |
+| Anti-copy mode blocks a drag-selection | Confirmed: 75 chars selected without it, 0 with |
+
+Three defects were found by looking at those screenshots that neither the typechecker nor
+the linter could catch, and all three are fixed in this branch:
+
+1. The settings description ran underneath the "Reset permission" button. Paths and URLs now
+   sit in a full-width block below the row.
+2. `MarkdownRenderer.render` injects Obsidian's own "copy code" button into rendered output,
+   and it was being shipped to visitors as a dead control — actively contradictory next to
+   anti-copy mode. Editor-only affordances are now stripped before serving.
+3. The launcher showed the file extension in the title and repeated the file name as its
+   subtitle for notes at the vault root.
+
+**Not verified:** the live public tunnel, and therefore every UI state that only exists once a
+tunnel is up — the tab-header dot, the floating overlay, and the live viewer count. The
+development sandbox's egress policy blocks `api.trycloudflare.com`, so cloudflared started but
+could not obtain a quick tunnel. That did exercise the new error path, which failed fast with a
+readable diagnostic instead of hanging. An end-to-end share through Cloudflare, and the overlay
+in its live state, still need a manual check before release.
 
 ## Known limitations worth stating up front
 

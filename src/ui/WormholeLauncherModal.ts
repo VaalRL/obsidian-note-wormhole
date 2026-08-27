@@ -50,8 +50,12 @@ export class WormholeLauncherModal extends FuzzySuggestModal<TabChoice> {
         const title = content.createDiv({ cls: "suggestion-title" });
         title.setText(this.getBasename(item.file));
 
-        const note = content.createDiv({ cls: "suggestion-note" });
-        note.setText(item.file);
+        // Only show the folder line when there is one; for a note at the vault
+        // root it would just repeat the title.
+        const folder = this.getFolder(item.file);
+        if (folder) {
+            content.createDiv({ cls: "suggestion-note", text: folder });
+        }
 
         if (item.isActive) {
             const aux = el.createDiv({ cls: "suggestion-aux" });
@@ -59,9 +63,16 @@ export class WormholeLauncherModal extends FuzzySuggestModal<TabChoice> {
         }
     }
 
+    /** File name without the folder path or the markdown extension. */
     private getBasename(path: string): string {
         const parts = path.split("/");
-        return parts[parts.length - 1];
+        return parts[parts.length - 1].replace(/\.md$/i, "");
+    }
+
+    /** Folder containing the note, or an empty string at the vault root. */
+    private getFolder(path: string): string {
+        const index = path.lastIndexOf("/");
+        return index === -1 ? "" : path.slice(0, index);
     }
 
     onChooseItem(item: TabChoice): void {

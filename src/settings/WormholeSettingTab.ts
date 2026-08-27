@@ -64,46 +64,64 @@ export class WormholeSettingTab extends PluginSettingTab {
                     void this.plugin.saveSettings().then(() => this.display());
                 }));
 
-        void this.describeBinary(binarySetting);
+        // Paths and URLs go in a full-width block below the row: inside the
+        // setting's own description they would run under the button.
+        const binaryDetails = containerEl.createDiv({ cls: 'wormhole-binary-details' });
+
+        void this.describeBinary(binarySetting, binaryDetails);
     }
 
     /**
      * Fills in which cloudflared will actually be used. Done after render
      * because resolving it means touching the filesystem and running --version.
      */
-    private async describeBinary(setting: Setting) {
+    private async describeBinary(setting: Setting, details: HTMLElement) {
         const binaries = new CloudflaredBinaryService();
+
+        const addDetail = (label: string, value: string) => {
+            const row = details.createDiv({ cls: 'wormhole-binary-detail' });
+            row.createSpan({ cls: 'wormhole-binary-detail-label', text: label });
+            row.createEl('code', { cls: 'wormhole-binary-detail-value', text: value });
+        };
 
         try {
             const existing = await binaries.findExisting();
+            details.empty();
 
-            if (existing?.source === 'system') {
+            if (existing) {
                 setting.setDesc(
-                    `Using the copy already installed at ${existing.path}` +
-                    `${existing.version ? ` (${existing.version})` : ''}. Nothing will be downloaded.`
+                    existing.source === 'system'
+                        ? 'Using a copy already installed on this computer. Nothing will be downloaded.'
+                        : 'Using the checksum-verified copy Note Wormhole installed.'
                 );
-                return;
-            }
-
-            if (existing?.source === 'managed') {
-                setting.setDesc(
-                    `Using the verified copy Note Wormhole installed at ${existing.path} (${CLOUDFLARED_VERSION}).`
-                );
+                addDetail('Binary', existing.path);
+                addDetail('Version', existing.version ?? CLOUDFLARED_VERSION);
                 return;
             }
 
             const plan = binaries.getDownloadPlan();
+
+            if (!plan) {
+                setting.setDesc(
+                    `Cloudflare publishes no cloudflared build for ${process.platform}/${process.arch}. ` +
+                    `Install it manually and Note Wormhole will use it.`
+                );
+                details.remove();
+                return;
+            }
+
             setting.setDesc(
-                plan
-                    ? `Not installed. On first share, cloudflared ${plan.version} will be downloaded from ` +
-                      `${plan.url}, checked against its SHA-256, and installed to ${plan.installPath}. ` +
-                      `Install cloudflared yourself and Note Wormhole will prefer your copy.`
-                    : `Cloudflare publishes no cloudflared build for ${process.platform}/${process.arch}. ` +
-                      `Install it manually and Note Wormhole will use it.`
+                'Not installed. On first share it will be downloaded and checked against its SHA-256. ' +
+                'Install cloudflared yourself and Note Wormhole will prefer your copy.'
             );
+            addDetail('Version', plan.version);
+            addDetail('Download', plan.url);
+            addDetail('SHA-256', plan.sha256);
+            addDetail('Install to', plan.installPath);
         } catch (error) {
             console.error('[Wormhole] Could not resolve cloudflared', error);
             setting.setDesc('Could not determine the cloudflared status. Check the developer console.');
+            details.remove();
         }
     }
 }

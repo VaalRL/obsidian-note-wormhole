@@ -39,6 +39,8 @@ export class HtmlRendererService {
             this.component
         );
 
+        this.stripEditorAffordances(renderContainer);
+
         // 2. Build the full HTML document.
         // renderContainer.innerHTML is read (not written), and the markup it
         // returns is produced by Obsidian's own sanitising renderer.
@@ -65,6 +67,27 @@ ${isAntiCopy ? this.antiCopyScript() : ''}
 ${this.heartbeatScript()}
 </body>
 </html>`;
+    }
+
+    /**
+     * Obsidian's renderer injects editor-side controls — a copy button on code
+     * blocks, block edit handles, fold arrows. They are inert for a visitor, and
+     * a "copy code" button next to anti-copy mode is worse than inert, so they
+     * are removed before the HTML is served.
+     */
+    private stripEditorAffordances(container: HTMLElement) {
+        const selectors = [
+            ".copy-code-button",
+            ".edit-block-button",
+            ".collapse-indicator",
+            ".markdown-preview-pusher",
+            ".mod-header",
+            ".mod-footer"
+        ];
+
+        for (const selector of selectors) {
+            container.querySelectorAll(selector).forEach((el) => el.remove());
+        }
     }
 
     /**

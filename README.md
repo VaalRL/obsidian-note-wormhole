@@ -4,6 +4,8 @@ Instantly share your notes via a secure, temporary, local wormhole. No cloud upl
 
 Note Wormhole turns your machine into a temporary web server for a single note, and exposes it through a Cloudflare quick tunnel. Close the tab, disable the plugin, or quit the app, and the link is dead.
 
+![The plugin in Obsidian](docs/images/obsidian-note.png)
+
 ## Features
 
 - **Ephemeral sharing** — a public `https://<random>.trycloudflare.com` URL tunnels straight to your computer.
@@ -21,6 +23,15 @@ Note Wormhole turns your machine into a temporary web server for a single note, 
 3. On first use you'll be asked to allow the one-time tunnel component download (see [Network use](#network-use) below).
 4. The link is copied to your clipboard, and a green dot appears in the tab header.
 
+Both commands are in the command palette:
+
+![Command palette entries](docs/images/commands.png)
+
+The ribbon icon opens a picker, so you can share any open tab rather than just the
+active one. Tabs that are already live are flagged:
+
+![Wormhole launcher](docs/images/launcher.png)
+
 ### Controlling a session
 
 - **Hover** the green dot to see the viewer count.
@@ -30,6 +41,15 @@ Note Wormhole turns your machine into a temporary web server for a single note, 
   - **Stop sharing** — collapse the wormhole.
 - The **floating panel** in the bottom-right of the note offers the same controls.
 - The **status bar** item shows how many wormholes are open; click it to toggle the current note.
+
+## What the reader sees
+
+The note is re-rendered into a standalone page. The **Theme mode** setting decides
+whether visitors get light, dark, or whatever their own system prefers:
+
+| Light | Dark |
+| --- | --- |
+| ![Shared page, light](docs/images/shared-page-light.png) | ![Shared page, dark](docs/images/shared-page-dark.png) |
 
 ## Network use
 
@@ -61,9 +81,15 @@ Only when no `cloudflared` exists does it offer to fetch one, and that download 
   (`~/.cache`, `~/Library/Caches`, or `%LOCALAPPDATA%`) — never into the vault, so it is
   never picked up by Obsidian Sync, and never into the world-writable OS temp directory.
 
+Nothing is fetched until you have seen exactly what will be fetched:
+
+![Cloudflared consent dialog](docs/images/cloudflared-consent.png)
+
 You can revoke consent from the plugin's settings tab, which also shows which binary is
 currently in use. If you would rather the plugin never download anything, install `cloudflared`
 yourself before your first share.
+
+![Plugin settings](docs/images/settings.png)
 
 The tunnel is a Cloudflare **quick tunnel**: no Cloudflare account or token is required, the URL
 is randomly assigned, and the service is subject to
@@ -76,6 +102,12 @@ is randomly assigned, and the service is subject to
 - The rendered HTML is held in memory only — it is never written to disk.
 - Responses are sent with `no-store`, a restrictive `Content-Security-Policy`, `X-Robots-Tag: noindex`, and `Referrer-Policy: no-referrer`.
 - Ending a session destroys the tunnel and force-closes every open socket, so the URL dies immediately.
+
+With **Prevent text selection** on, dragging across the page selects nothing:
+
+| Selection allowed | Anti-copy mode |
+| --- | --- |
+| ![Text selected normally](docs/images/selection-allowed.png) | ![Nothing selected](docs/images/selection-blocked.png) |
 
 **Anti-copy mode is a deterrent, not protection.** It disables selection, the context menu, and the copy/print shortcuts, but anyone who wants the text can still read the page source. Do not treat it as a security control.
 
