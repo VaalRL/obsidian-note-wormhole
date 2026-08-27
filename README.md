@@ -37,11 +37,37 @@ This plugin is not self-contained. Before installing, understand what it does on
 
 | What | Where to | When |
 | --- | --- | --- |
-| Downloads the `cloudflared` binary | Cloudflare's official GitHub releases | Once, on first share, only after you accept the in-app prompt |
+| Downloads the `cloudflared` binary | Cloudflare's official GitHub releases | Only if you have no `cloudflared`, once, and only after you accept the in-app prompt |
 | Runs `cloudflared` as a child process | — | While a wormhole is open |
 | Relays note content through a Cloudflare quick tunnel | Cloudflare's edge network | While a wormhole is open |
 
-The download and tunnel are handled by [`untun`](https://github.com/unjs/untun). The tunnel is a Cloudflare **quick tunnel**: no Cloudflare account or token is required, the URL is randomly assigned, and the service is subject to [Cloudflare's terms](https://www.cloudflare.com/website-terms/). You can revoke your consent and be prompted again from the plugin's settings tab.
+### How the binary is obtained
+
+Note Wormhole **prefers a `cloudflared` you installed yourself.** On first share it looks on
+your `PATH` and in the usual install locations (Homebrew, `/usr/local/bin`, `Program Files`, …).
+If it finds one, it uses it and downloads nothing.
+
+Only when no `cloudflared` exists does it offer to fetch one, and that download is constrained:
+
+- **Pinned version.** It downloads one specific release, never "latest". The version, URL and
+  SHA-256 live in [`src/services/cloudflaredReleases.ts`](src/services/cloudflaredReleases.ts).
+- **Checksum verified.** The download is hashed while it streams. If the SHA-256 does not match
+  the pinned value, it is discarded and nothing is installed.
+- **Shown before it happens.** The consent dialog displays the exact URL, version, checksum,
+  size, and install path before you agree.
+- **HTTPS and GitHub only.** Redirects are followed only within `github.com` and
+  `githubusercontent.com`, and only over HTTPS.
+- **Outside your vault.** It installs to a per-user cache directory
+  (`~/.cache`, `~/Library/Caches`, or `%LOCALAPPDATA%`) — never into the vault, so it is
+  never picked up by Obsidian Sync, and never into the world-writable OS temp directory.
+
+You can revoke consent from the plugin's settings tab, which also shows which binary is
+currently in use. If you would rather the plugin never download anything, install `cloudflared`
+yourself before your first share.
+
+The tunnel is a Cloudflare **quick tunnel**: no Cloudflare account or token is required, the URL
+is randomly assigned, and the service is subject to
+[Cloudflare's terms](https://www.cloudflare.com/website-terms/).
 
 ## Security and privacy
 
@@ -82,6 +108,15 @@ npm run dev     # watch build
 npm run build   # typecheck + production bundle
 npm run lint
 ```
+
+The plugin has no runtime dependencies. To move to a newer `cloudflared`, run:
+
+```bash
+npm run update-cloudflared -- 2026.8.2
+```
+
+That downloads every release asset, hashes it, and rewrites the checksum table from what it
+actually fetched. Checksums are never written by hand.
 
 ## License
 

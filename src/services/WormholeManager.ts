@@ -2,6 +2,7 @@ import { App, Notice, MarkdownView } from 'obsidian';
 import { HtmlRendererService } from './HtmlRendererService';
 import { LocalServerService } from './LocalServerService';
 import { TunnelService } from './TunnelService';
+import { CloudflaredBinaryService, ResolvedBinary } from './CloudflaredBinaryService';
 import { WormholeOverlay } from '../ui/WormholeOverlay';
 import { BinaryInstallationModal } from '../ui/BinaryInstallationModal';
 import NoteWormholePlugin from "../../main";
@@ -26,6 +27,7 @@ export class WormholeManager {
     private app: App;
     private plugin: NoteWormholePlugin;
     private renderer: HtmlRendererService;
+    private binaries: CloudflaredBinaryService;
 
     private sessions: Map<string, WormholeSession> = new Map();
 
@@ -33,6 +35,7 @@ export class WormholeManager {
         this.app = app;
         this.plugin = plugin;
         this.renderer = new HtmlRendererService(app);
+        this.binaries = new CloudflaredBinaryService();
         this.registerLifecycleListeners();
     }
     async startSharing(leafId: string, markdownContent: string, filePath: string): Promise<string> {
@@ -44,30 +47,83 @@ export class WormholeManager {
             return existing.publicUrl;
         }
 
-        // CHECK: Have we accepted the binary terms?
-        if (!this.plugin.settings.hasAcceptedTunnelTerms) {
-            return new Promise((resolve, reject) => {
-                new BinaryInstallationModal(
-                    this.app,
-                    async () => {
-                        // On Accept
-                        this.plugin.settings.hasAcceptedTunnelTerms = true;
-                        await this.plugin.saveSettings();
-                        this.performStartSharing(leafId, markdownContent, filePath).then(resolve).catch(reject);
-                    },
-                    () => {
-                        // On Cancel
-                        new Notice("Wormhole cancelled: terms not accepted.");
-                        reject(new Error("Terms declined"));
-                    }
-                ).open();
-            });
-        }
-
-        return this.performStartSharing(leafId, markdownContent, filePath);
+        const binary = await this.ensureCloudflared();
+        return this.performStartSharing(leafId, markdownContent, filePath, binary);
     }
 
-    private async performStartSharing(leafId: string, markdownContent: string, filePath: string): Promise<string> {
+    /**
+     * Resolves a cloudflared binary, asking for consent first.
+     *
+     * Consent is tracked in two parts on purpose: agreeing to run a copy the
+     * user already installed is a smaller ask than agreeing to let the plugin
+     * download an executable, so losing the system binary re-prompts rather
+     * than silently starting a download.
+     */
+    private async ensureCloudflared(): Promise<ResolvedBinary> {
+        const existing = await this.binaries.findExisting();
+        const settings = this.plugin.settings;
+
+        const consented = existing
+            ? settings.hasAcceptedTunnelTerms
+            : settings.hasAcceptedTunnelTerms && settings.hasAcceptedBinaryDownload;
+
+        if (!consented) {
+            await this.requestConsent(existing);
+        }
+
+        if (existing) return existing;
+
+        return this.downloadCloudflared();
+    }
+
+    /** Opens the consent modal; resolves on accept, rejects if the user declines. */
+    private requestConsent(existing: ResolvedBinary | null): Promise<void> {
+        const plan = existing ? null : this.binaries.getDownloadPlan();
+
+        return new Promise((resolve, reject) => {
+            new BinaryInstallationModal(this.app, {
+                existing,
+                plan,
+                onAccept: () => {
+                    this.plugin.settings.hasAcceptedTunnelTerms = true;
+                    if (!existing) {
+                        this.plugin.settings.hasAcceptedBinaryDownload = true;
+                    }
+                    void this.plugin.saveSettings().then(resolve).catch(reject);
+                },
+                onCancel: () => {
+                    new Notice("Wormhole cancelled: cloudflared was not approved.");
+                    reject(new Error("Cloudflared permission declined"));
+                }
+            }).open();
+        });
+    }
+
+    /** Downloads and verifies the pinned cloudflared, reporting progress. */
+    private async downloadCloudflared(): Promise<ResolvedBinary> {
+        const notice = new Notice("Downloading cloudflared... 0%", 0);
+        let lastShown = -1;
+
+        try {
+            return await this.binaries.install(({ receivedBytes, totalBytes }) => {
+                if (!totalBytes) return;
+                const percent = Math.min(100, Math.floor((receivedBytes / totalBytes) * 100));
+                // Repainting on every chunk would thrash the DOM.
+                if (percent === lastShown) return;
+                lastShown = percent;
+                notice.setMessage(`Downloading cloudflared... ${percent}%`);
+            });
+        } finally {
+            notice.hide();
+        }
+    }
+
+    private async performStartSharing(
+        leafId: string,
+        markdownContent: string,
+        filePath: string,
+        binary: ResolvedBinary
+    ): Promise<string> {
         const server = new LocalServerService();
         const tunnel = new TunnelService();
 
@@ -95,8 +151,8 @@ export class WormholeManager {
             // 2. Start Local Server
             const port = await server.start(html);
 
-            // 3. Start Tunnel (suppress native prompt since we handled it)
-            const url = await tunnel.start(port, { acceptCloudflareNotice: true });
+            // 3. Start Tunnel using the binary resolved above
+            const url = await tunnel.start(port, binary);
 
             // 4. Create Overlay (F-11)
             const leaf = this.app.workspace.getLeafById(leafId);
@@ -270,7 +326,7 @@ export class WormholeManager {
             const session = this.sessions.get(leafId);
             if (session) {
                 session.overlay?.destroy();
-                session.tunnel.stop().catch(e => console.error(e));
+                session.tunnel.stopSync();
                 session.server.stop();
             }
         }

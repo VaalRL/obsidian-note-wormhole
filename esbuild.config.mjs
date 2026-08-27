@@ -41,7 +41,7 @@ const context = await esbuild.context({
         "@codemirror/text",
         "@codemirror/tooltip",
         "@codemirror/view",
-        "node:*", // Allow node: protocol imports foruntun
+        "node:*", // Node built-ins used by the desktop-only tunnel/server code
         ...builtins],
     format: "cjs",
     target: "es2018",

@@ -19,7 +19,7 @@ export class WelcomeModal extends Modal {
         featureList.createEl('li', { text: 'Private: served from memory, never uploaded to cloud storage.' });
 
         contentEl.createEl('p', {
-            text: 'Sharing needs a one-time download of the Cloudflare tunnel component (cloudflared). You will be asked before that happens.',
+            text: 'Sharing runs the Cloudflare tunnel component (cloudflared). Note Wormhole uses a copy you already have; if you have none it will offer to download one, showing you the exact source and checksum first.',
             cls: 'setting-item-description'
         });
 

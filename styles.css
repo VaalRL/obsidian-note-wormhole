@@ -77,3 +77,41 @@
     outline: 2px solid var(--interactive-accent);
     outline-offset: 1px;
 }
+
+/* --- Cloudflared consent modal --- */
+
+.wormhole-binary-details {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 4px 12px;
+    margin: 12px 0;
+    padding: 10px 12px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-s, 4px);
+    background-color: var(--background-secondary);
+    font-size: var(--font-ui-smaller);
+}
+
+.wormhole-binary-detail {
+    display: contents;
+}
+
+.wormhole-binary-detail-label {
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+.wormhole-binary-detail-value {
+    overflow-wrap: anywhere;
+    background: none;
+    padding: 0;
+    color: var(--text-normal);
+}
+
+.wormhole-binary-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 8px;
+    font-size: var(--font-ui-smaller);
+}

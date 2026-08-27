@@ -28,7 +28,9 @@ Tracking document for getting **Note Wormhole** into the official community plug
 | No inline styles or hardcoded colours in plugin UI — all via `styles.css` and CSS variables | ✅ |
 | Icon buttons have `aria-label`, tab indicator is keyboard operable, `:focus-visible` outlines defined | ✅ |
 | Tunnel and local server torn down on `onunload` and on tab close | ✅ |
-| Binary download requires explicit user consent, revocable in settings | ✅ |
+| Prefers a user-installed cloudflared; downloads only as a fallback | ✅ |
+| Download is version-pinned and SHA-256 verified, with the URL shown before consent | ✅ |
+| No runtime dependencies | ✅ |
 
 ## Manual steps still required
 
@@ -77,13 +79,62 @@ These cannot be done from the repository itself.
 
 This plugin does two things that get extra scrutiny. Have answers ready in the PR thread.
 
-- **It downloads and executes a third-party binary.** `untun` fetches `cloudflared` from
-  Cloudflare's GitHub releases and runs it as a child process. Point to
-  `BinaryInstallationModal` (explicit opt-in before any download), the settings toggle that
-  revokes consent, and the "Network use" section of the README.
-- **It exposes vault content to the public internet.** Point to the loopback-only bind, the
-  root-path-only handler, in-memory rendering, and the teardown paths in
-  `WormholeManager.unload()` / `LocalServerService.stop()`.
+### "It downloads and executes a third-party binary"
+
+This is the highest-risk item in the submission. The mitigations, in the order a reviewer
+will want them:
+
+1. **It prefers a binary the user already installed.** `CloudflaredBinaryService.findExisting()`
+   searches `PATH` and the standard install locations, and confirms the candidate by running
+   `--version`. If one is found, nothing is downloaded — the same trust model as Obsidian Git
+   using the system `git`.
+2. **A download is pinned, never "latest".** The version, asset name, SHA-256 and size live in
+   `src/services/cloudflaredReleases.ts`. `scripts/update-cloudflared.mjs` regenerates that
+   table by downloading and hashing the real assets, so checksums are never hand-written.
+3. **The checksum is enforced.** The stream is hashed during download; on mismatch the staging
+   file is deleted and nothing is installed. Verified by test — see below.
+4. **Transport is constrained.** HTTPS only, redirects followed only within `github.com` and
+   `githubusercontent.com`.
+5. **Consent is informed and granular.** `BinaryInstallationModal` shows the exact URL, version,
+   SHA-256, size and install path before anything is fetched. Agreeing to run a
+   user-installed binary and agreeing to a download are tracked as two separate settings, so
+   losing the system binary re-prompts instead of silently downloading.
+6. **The install location is sane.** A per-user cache directory — not the vault (which would
+   sync a 40 MB executable) and not the world-writable OS temp directory.
+
+Worth stating plainly: the plugin previously delegated all of this to `untun`, which hardcoded
+its binary into `os.tmpdir()`, performed no checksum verification at all, pinned cloudflared
+2023.10.0, sent Apple Silicon to the Rosetta build, and registered process-wide
+SIGINT/SIGUSR handlers on every tunnel start without removing them. That dependency has been
+removed; the plugin now has **no runtime dependencies**.
+
+### "It exposes vault content to the public internet"
+
+Point to the loopback-only bind, the root-path-only handler, in-memory rendering, the response
+headers (CSP, `no-store`, `noindex`, `no-referrer`), and the teardown paths in
+`WormholeManager.unload()` / `LocalServerService.stop()` / `TunnelService.stop()`.
+
+## What has been verified, and how
+
+Run against the real cloudflared release on Linux x64:
+
+| Behaviour | Result |
+| --- | --- |
+| Detection when no cloudflared is present | Returns none, offers a download plan |
+| Download plan contents (URL, version, SHA-256, install path) | Correct and complete |
+| Download + checksum match + install + chmod | Installed and executable |
+| **Checksum mismatch is rejected** | Throws; no binary installed; no staging file left |
+| Local server serves the note, sends CSP | HTTP 200, header present |
+| Path control (`/secret`) | HTTP 404 |
+| Tunnel URL parsed from cloudflared output, incl. split across chunks | Parsed correctly |
+| `stop()` awaits real process exit; port refuses afterwards | Confirmed, no orphan processes |
+| `update-cloudflared` reproduces the committed table byte-for-byte | Confirmed |
+
+**Not verified:** the live public tunnel. The development sandbox's egress policy blocks
+`api.trycloudflare.com`, so cloudflared could start but not obtain a quick tunnel. The failure
+produced a clear diagnostic rather than hanging, which exercised the error path — but an
+end-to-end share through Cloudflare should be confirmed manually before release, along with the
+overlay CSS and theme rendering inside Obsidian.
 
 ## Known limitations worth stating up front
 
