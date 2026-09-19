@@ -113,6 +113,79 @@ deleting a path rather than writing one.
 If the download is kept, say so plainly in the submission and be ready for it to be the thing
 the review turns on.
 
+## Precedent in the directory
+
+Checked against `community-plugins.json` (7,808 published plugins) and, where the answer
+depended on timing, against that file's own history.
+
+### Running a local HTTP server over the vault — settled, abundant precedent
+
+| Plugin | What it does |
+| --- | --- |
+| `obsidian-local-rest-api` | Full read/write REST API over HTTPS on localhost |
+| `html-server` | Serves the vault over HTTP; its README tells users to reach it from other devices by IP, and recommends **ngrok** to "share your vault openly with someone outside of your local network" |
+| `note-api`, `browser-note` | "Expose a localhost HTTP API (API-key protected) to view, create, edit and delete" |
+| `live-preview`, `termux-bridge` | Local HTTP server; `termux-bridge` executes shell commands through it |
+
+Note Wormhole binds to `127.0.0.1` only, which is stricter than `html-server`, and serves one
+note read-only rather than the whole vault.
+
+### Running an external binary — abundant precedent, always one the user installed
+
+| Plugin | How it gets the binary |
+| --- | --- |
+| `obsidian-pandoc` | User installs pandoc |
+| `obsidian-enhancing-export` | "First install the latest `pandoc`... then add `pandoc` path to environment variable `PATH` or set absolute path... in the plugin setting view" |
+| `obsidian-ffmpeg-converter` | "You must install FFmpeg first... add the `bin` folder of FFmpeg to your environment variables" |
+| `obsidian-git`, `openterm` | System `git` / system shell |
+
+This is the sanctioned shape, and it is what `CloudflaredBinaryService.findExisting()` already
+implements.
+
+### Downloading an executable at runtime — exactly one precedent, and it is nuanced
+
+`jacksteamdev/obsidian-mcp-tools` downloaded a platform-specific signed binary into
+`{vault}/.obsidian/plugins/obsidian-mcp-tools/bin/`, with SLSA provenance attestations and
+documented verification steps.
+
+It **was listed and stayed listed for at least a year**. From the registry's own history:
+
+| Registry snapshot | Listed? |
+| --- | --- |
+| 2025-06-01 | yes |
+| 2025-12-01 | yes |
+| 2026-02-01 | yes |
+| 2026-04-01 | yes |
+| 2026-05-01 | yes |
+| 2026-05-20 | **gone** |
+
+Its author archived the repository on 2026-05-13, saying several alternatives now exist. The
+delisting window matches that archival, so this reads as the author withdrawing it rather than
+Obsidian enforcing the dependency policy against it.
+
+Three caveats before leaning on this precedent:
+
+- It was approved under the older pull-request review, before the automated scanning and
+  scorecards described above went live.
+- It shipped **signed** binaries with SLSA attestation, a higher integrity bar than a pinned
+  SHA-256, though the checksum enforcement here is real.
+- It installed into the vault, which this plugin deliberately avoids.
+
+There is no *currently listed* plugin that downloads an executable, so the precedent cannot be
+pointed at as a live example.
+
+### Publishing notes publicly — common, but nobody tunnels
+
+Around 35 listed plugins publish or share notes to the web (`flowershow`, `orion-publish`,
+`jotbird` — "publish notes as shareable web pages with one click, no account required" —
+`share-hosted`, and others). They all upload to a hosted service. The closest thing to a direct
+device-to-device model is `peer-share`, which uses WebRTC with a signalling server that "only
+handles peer discovery".
+
+Serving from the user's own machine through a tunnel appears to be new to the directory. That is
+not a precedent against it; it means there is no precedent either way, so the README's network
+disclosure carries the weight.
+
 ## Expect reviewers to ask about
 
 This plugin does two things that get extra scrutiny. Have answers ready for the review thread.
