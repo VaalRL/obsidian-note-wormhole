@@ -3,6 +3,7 @@ import NoteWormholePlugin from '../../main';
 import { ThemeMode } from './WormholeSettings';
 import { CloudflaredBinaryService } from '../services/CloudflaredBinaryService';
 import { CLOUDFLARED_VERSION } from '../services/cloudflaredReleases';
+import { SUPPORT_URL } from '../constants';
 
 export class WormholeSettingTab extends PluginSettingTab {
     plugin: NoteWormholePlugin;
@@ -69,6 +70,33 @@ export class WormholeSettingTab extends PluginSettingTab {
         const binaryDetails = containerEl.createDiv({ cls: 'wormhole-binary-details' });
 
         void this.describeBinary(binarySetting, binaryDetails);
+
+        this.renderSupport(containerEl);
+    }
+
+    /**
+     * A plain text link rather than a Buy Me A Coffee banner image: the badge is
+     * a remote image request on every settings open, and `fundingUrl` in
+     * manifest.json already gives Obsidian's own support button.
+     */
+    private renderSupport(containerEl: HTMLElement) {
+        new Setting(containerEl)
+            .setName('Support')
+            .setHeading();
+
+        const setting = new Setting(containerEl)
+            .setName('Buy me a coffee')
+            .setDesc('Note Wormhole is free and MIT licensed. If it saved you some time, you can chip in.');
+
+        setting.controlEl.createEl('a', {
+            text: 'Buy me a coffee',
+            href: SUPPORT_URL,
+            attr: {
+                target: '_blank',
+                rel: 'noopener noreferrer',
+                'aria-label': 'Support the developer on Buy Me A Coffee'
+            }
+        });
     }
 
     /**
