@@ -8,8 +8,7 @@
         "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
         "test": "node scripts/run-tests.mjs",
         "lint": "eslint main.ts src --ext .ts",
-        "version": "node version-bump.mjs && git add manifest.json versions.json",
-        "update-cloudflared": "node scripts/update-cloudflared.mjs"
+        "version": "node version-bump.mjs && git add manifest.json versions.json"
     },
     "keywords": [
         "obsidian",

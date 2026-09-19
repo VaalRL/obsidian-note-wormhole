@@ -33,8 +33,8 @@ Tracking document for getting **Note Wormhole** into the official community plug
 | Tab-header indicators removed on `onunload` (Obsidian does not own that DOM, so it cannot clean it up for us) | ✅ |
 | Consent dialog dismissed with Escape or the close button is treated as a refusal, not left pending | ✅ |
 | Background timer does no work while nothing is shared | ✅ |
-| Prefers a user-installed cloudflared; downloads only as a fallback | ⚠️ see the policy risk below |
-| Download is version-pinned and SHA-256 verified, with the URL shown before consent | ✅ |
+| Runs only a user-installed cloudflared; never downloads or installs it | ✅ |
+| README discloses network use, and the files read outside the vault | ✅ |
 | No runtime dependencies | ✅ |
 
 ## Done on GitHub
@@ -60,15 +60,11 @@ These need a decision or a credential that the repository cannot supply.
    `main` must carry the final manifest before submitting. Everything here is currently on
    `submission-prep`.
 
-2. **Decide what to do about the cloudflared download.** ⚠️ *blocking — see below*
-   The developer policies forbid a plugin from installing "themselves or their dependencies".
-   The download fallback is at risk under that rule.
-
-3. **Make the repository public.** ⚠️ *blocking*
+2. **Make the repository public.** ⚠️ *blocking*
    The review needs access to the source, and users' Obsidian installs fetch the release assets
    from it.
 
-4. **Cut the first release.**
+3. **Cut the first release.**
    ```bash
    npm version 1.0.0        # syncs manifest.json + versions.json
    git push --follow-tags
@@ -80,38 +76,40 @@ These need a decision or a credential that the repository cannot supply.
    Obsidian downloads those three files from the release whose tag matches the `version` in the
    committed manifest, so the release and the committed manifest have to agree.
 
-5. **Submit at [community.obsidian.md](https://community.obsidian.md).**
+4. **Submit at [community.obsidian.md](https://community.obsidian.md).**
    Sign in with an Obsidian account, link the GitHub account that owns the repository, then add
    the plugin. No JSON entry to write by hand any more.
 
-6. **Expect the automated review.** Every submitted version is scanned automatically for code
+5. **Expect the automated review.** Every submitted version is scanned automatically for code
    quality, security vulnerabilities and malware, and the results appear as a scorecard on the
    plugin's directory page. A new submission must pass before it is listed at all, and a
    published plugin that later fails is removed from search within 24 hours.
 
-## The policy risk worth resolving before submitting
+## The dependency policy, and how it was resolved
 
 The developer policies list, under **Not allowed**:
 
 > Plugins and themes must not:
 > - Install or update themselves or their dependencies.
 
-Note Wormhole downloads and installs `cloudflared` when it cannot find one. That is installing a
-dependency, and it is the single most likely reason for this submission to be rejected. The
-mitigations already in place — pinned version, SHA-256 verification, HTTPS and GitHub-only
-hosts, informed two-stage consent, install outside the vault — make the download *safe*, but
-they do not make it *permitted*, and the automated scan sees an executable being fetched at
-runtime.
+Note Wormhole used to download and install `cloudflared` when it could not find one. That is
+installing a dependency, and it was the most likely reason for this submission to be rejected.
+The pinning, checksum verification, host allowlist and staged consent made that download *safe*;
+they did not make it *permitted*.
 
-The plugin already prefers a cloudflared the user installed themselves. The lowest-risk path is
-to make that the **only** path: detect it, and when it is missing, explain how to install it
-(`brew install cloudflared`, `winget install Cloudflare.cloudflared`, the official download
-page) instead of fetching it. That costs first-run convenience and removes the policy exposure
-entirely. `CloudflaredBinaryService.findExisting()` already does the detection, so this is
-deleting a path rather than writing one.
+**The download has been removed.** The plugin now only runs a `cloudflared` the user installed,
+which is what every comparable plugin in the directory does. When there is none it says so and
+shows the install command for the platform, and the search re-runs on the next attempt so no
+restart is needed.
 
-If the download is kept, say so plainly in the submission and be ready for it to be the thing
-the review turns on.
+What went with it: the pinned release table, the SHA-256 verification, the HTTPS/GitHub host
+allowlist, the archive extraction, the per-user cache directory, `scripts/update-cloudflared.mjs`,
+and the second consent flag. All of it existed to make a download defensible; none of it is
+needed to not download. The bundle lost about 12% of its size.
+
+What stayed: the plugin still *runs* an external binary and still relays note content through
+Cloudflare. Both are disclosed in the README, the second behind an explicit first-run
+confirmation.
 
 ## Precedent in the directory
 
@@ -167,9 +165,11 @@ Three caveats before leaning on this precedent:
 
 - It was approved under the older pull-request review, before the automated scanning and
   scorecards described above went live.
-- It shipped **signed** binaries with SLSA attestation, a higher integrity bar than a pinned
-  SHA-256, though the checksum enforcement here is real.
-- It installed into the vault, which this plugin deliberately avoids.
+- It shipped **signed** binaries with SLSA attestation.
+- It installed into the vault.
+
+None of that applies here any more: this plugin downloads nothing at all, which is a stricter
+position than the precedent needed to defend.
 
 There is no *currently listed* plugin that downloads an executable, so the precedent cannot be
 pointed at as a live example.
@@ -190,48 +190,30 @@ disclosure carries the weight.
 
 This plugin does two things that get extra scrutiny. Have answers ready for the review thread.
 
-### "It downloads and executes a third-party binary"
+### "It runs a third-party binary"
 
-This is the highest-risk item in the submission. The mitigations, in the order a reviewer
-will want them:
+It runs `cloudflared`, and only a copy the user installed. It never downloads, installs or
+updates it. `CloudflaredBinaryService.findExisting()` searches `PATH` and the standard install
+locations, and confirms a candidate by running `--version` before spawning it, so something else
+named `cloudflared` on `PATH` is not executed just because the name matched. The trust model is
+the same as obsidian-pandoc with `pandoc`, or Obsidian Git with the system `git`.
 
-1. **It prefers a binary the user already installed.** `CloudflaredBinaryService.findExisting()`
-   searches `PATH` and the standard install locations, and confirms the candidate by running
-   `--version`. If one is found, nothing is downloaded — the same trust model as Obsidian Git
-   using the system `git`.
-2. **A download is pinned, never "latest".** The version, asset name, SHA-256 and size live in
-   `src/services/cloudflaredReleases.ts`. `scripts/update-cloudflared.mjs` regenerates that
-   table by downloading and hashing the real assets, so checksums are never hand-written.
-3. **The checksum is enforced.** The stream is hashed during download; on mismatch the staging
-   file is deleted and nothing is installed. Verified by test — see below.
-4. **Transport is constrained.** HTTPS only, redirects followed only within `github.com` and
-   `githubusercontent.com`.
-5. **Consent is informed and granular.** `BinaryInstallationModal` shows the exact URL, version,
-   SHA-256, size and install path before anything is fetched. Agreeing to run a
-   user-installed binary and agreeing to a download are tracked as two separate settings, so
-   losing the system binary re-prompts instead of silently downloading.
-6. **The install location is sane.** A per-user cache directory — not the vault (which would
-   sync a 40 MB executable) and not the world-writable OS temp directory.
-
-Worth stating plainly: the plugin previously delegated all of this to `untun`, which hardcoded
-its binary into `os.tmpdir()`, performed no checksum verification at all, pinned cloudflared
-2023.10.0, sent Apple Silicon to the Rosetta build, and registered process-wide
-SIGINT/SIGUSR handlers on every tunnel start without removing them. That dependency has been
-removed; the plugin now has **no runtime dependencies**.
+When none is found, the plugin stops and shows the install command for the platform. There is no
+fallback that fetches anything.
 
 ### "Use `Platform` from the API instead of `process.platform`"
 
 A fair question, and the usual answer ("it breaks on mobile") does not apply here —
 the plugin is `isDesktopOnly: true` and cannot load on mobile at all.
 
-`Platform` exposes `isDesktop`, `isMacOS`, `isWin`, `isLinux`, but **not the CPU
-architecture**, and picking a cloudflared asset needs both: `darwin-arm64` and
-`darwin-x64` are different downloads with different checksums. `process.arch` is the
-only source for that, so the asset table is keyed on `${process.platform}-${process.arch}`
-and the surrounding code stays consistent with it rather than mixing two platform APIs.
+`process.platform` is used to pick where to look for the binary, which shell lookup command to
+run (`where` versus `which`), and which install instructions to show. `Platform` from the API
+could cover the first and third, but not the second, and mixing two platform APIs in one file
+reads worse than using one consistently.
 
-`resolveAsset(platform, arch)` takes both as parameters precisely so the mapping is
-testable without pretending to be another machine — see `tests/cloudflaredReleases.test.ts`.
+Every function that branches on it takes the platform as a parameter with `process.platform` only
+as the default, so the behaviour is testable for all platforms from one machine — see
+`tests/cloudflaredInstall.test.ts`.
 
 ### "It exposes vault content to the public internet"
 
@@ -245,10 +227,10 @@ headers (CSP, `no-store`, `noindex`, `no-referrer`), and the teardown paths in
 
 | Behaviour | Covered by |
 | --- | --- |
-| Pinned release table: every platform present, 64-char hex checksums, plausible sizes, archive flag matches the asset name | `tests/cloudflaredReleases.test.ts` |
-| Windows on ARM maps to the x64 asset *and its checksum*, and is flagged emulated | same |
-| Unsupported platform returns null rather than guessing an asset | same |
-| Every download URL is HTTPS and inside `ALLOWED_DOWNLOAD_HOSTS`; lookalike hosts (`github.com.evil.test`) are not | same |
+| Install guidance exists on every platform, including unknown ones, and every method tells the user something to do | `tests/cloudflaredInstall.test.ts` |
+| Every URL shown is HTTPS and points at Cloudflare's own site or `github.com/cloudflare/cloudflared` | same |
+| The documented package-manager command per platform, and no command that installs anything other than cloudflared | same |
+| The "looked in" text names `PATH` on every platform | same |
 | Root path serves the note from memory; CSP / `no-store` / `nosniff` / `noindex` / `no-referrer` all present | `tests/localServer.test.ts` |
 | **S-03 path control**: `/secret`, `/../main.ts`, `/favicon.ico` all 404 and leak no body | same |
 | Heartbeat returns 204 with no CORS grant; counts one viewer per id; ignores a missing id | same |
@@ -260,15 +242,11 @@ headers (CSP, `no-store`, `noindex`, `no-referrer`), and the teardown paths in
 
 | Behaviour | Result |
 | --- | --- |
-| Detection when no cloudflared is present | Returns none, offers a download plan |
-| Download plan contents (URL, version, SHA-256, install path) | Correct and complete |
-| Download + checksum match + install + chmod | Installed and executable |
-| **Checksum mismatch is rejected** | Throws; no binary installed; no staging file left |
+| Detection when no cloudflared is present | Returns none; install instructions shown |
 | Local server serves the note, sends CSP | HTTP 200, header present |
 | Path control (`/secret`) | HTTP 404 |
 | Tunnel URL parsed from cloudflared output, incl. split across chunks | Parsed correctly |
 | `stop()` awaits real process exit; port refuses afterwards | Confirmed, no orphan processes |
-| `update-cloudflared` reproduces the committed table byte-for-byte | Confirmed |
 
 Additionally verified inside a real Obsidian 1.9.14 desktop install (headless, driven over
 the Electron debugging protocol), with the plugin loaded from a vault:
@@ -280,7 +258,7 @@ the Electron debugging protocol), with the plugin loaded from a vault:
 | Command palette shows both commands in sentence case | Confirmed |
 | Launcher lists open tabs and flags live ones | Confirmed |
 | Settings tab resolves and reports the cloudflared status | Confirmed |
-| Consent dialog shows the real URL, version, SHA-256, size and install path | Confirmed |
+| Consent dialog names the binary it will run and what the share exposes | Confirmed |
 | Shared page renders through the real renderer and local server | Confirmed |
 | Theme mode drives the visitor's colour scheme | Confirmed, light and dark |
 | Anti-copy mode blocks a drag-selection | Confirmed: 75 chars selected without it, 0 with |
@@ -321,7 +299,7 @@ Obsidian 1.9 desktop install on Windows 11, with a genuine Cloudflare quick tunn
 
 | Behaviour | Result |
 | --- | --- |
-| Consent dialog, "existing binary" variant | Shown with the real path and version |
+| Consent dialog | Shown with the real binary path and version |
 | Quick tunnel established | `https://<random>.trycloudflare.com` assigned and reachable |
 | Notice on success, link copied to clipboard | Confirmed |
 | Floating control panel, positioned and styled | Confirmed |
@@ -333,7 +311,6 @@ Obsidian 1.9 desktop install on Windows 11, with a genuine Cloudflare quick tunn
 | Theme mode follows the visitor's `prefers-color-scheme` | Confirmed, light and dark, against the public URL |
 | Stopping a session | Indicator, overlay and session all gone; `Wormhole closed.` notice shown |
 | **The link really dies** | Fetching the URL after stopping returns HTTP 502 from Cloudflare's edge — the origin is gone |
-| Pinned SHA-256 matches the real Cloudflare asset | Confirmed by independent download: byte count and digest both match `cloudflaredReleases.ts` |
 
 Note for anyone quoting the old PRD: a stopped tunnel answers **502**, not 404. The 404 in
 `req.md` §2.1 describes the intent, not what Cloudflare's edge returns once the origin is gone.

@@ -2,7 +2,11 @@ import { App, PluginSettingTab, Setting } from 'obsidian';
 import NoteWormholePlugin from '../../main';
 import { ThemeMode } from './WormholeSettings';
 import { CloudflaredBinaryService } from '../services/CloudflaredBinaryService';
-import { CLOUDFLARED_VERSION } from '../services/cloudflaredReleases';
+import {
+    CLOUDFLARED_DOWNLOADS_URL,
+    installMethodsFor,
+    searchLocationsFor
+} from '../services/cloudflaredInstall';
 import { SUPPORT_URL } from '../constants';
 
 export class WormholeSettingTab extends PluginSettingTab {
@@ -54,19 +58,26 @@ export class WormholeSettingTab extends PluginSettingTab {
             .setHeading();
 
         const binarySetting = new Setting(containerEl)
-            .setName('Cloudflared binary')
+            .setName('Cloudflared')
             .setDesc('Checking…')
             .addButton(button => button
-                .setButtonText('Reset permission')
-                .setDisabled(!this.plugin.settings.hasAcceptedTunnelTerms)
-                .onClick(() => {
-                    this.plugin.settings.hasAcceptedTunnelTerms = false;
-                    this.plugin.settings.hasAcceptedBinaryDownload = false;
-                    void this.plugin.saveSettings().then(() => this.display());
-                }));
+                .setButtonText('Check again')
+                .onClick(() => this.display()));
 
-        // Paths and URLs go in a full-width block below the row: inside the
-        // setting's own description they would run under the button.
+        if (this.plugin.settings.hasAcceptedTunnelTerms) {
+            new Setting(containerEl)
+                .setName('Sharing confirmation')
+                .setDesc('You have confirmed what a share exposes. Reset this to be asked again before the next share.')
+                .addButton(button => button
+                    .setButtonText('Ask me again')
+                    .onClick(() => {
+                        this.plugin.settings.hasAcceptedTunnelTerms = false;
+                        void this.plugin.saveSettings().then(() => this.display());
+                    }));
+        }
+
+        // Paths, commands and URLs go in a full-width block below the row:
+        // inside the setting's own description they would run under the button.
         const binaryDetails = containerEl.createDiv({ cls: 'wormhole-binary-details' });
 
         void this.describeBinary(binarySetting, binaryDetails);
@@ -100,16 +111,22 @@ export class WormholeSettingTab extends PluginSettingTab {
     }
 
     /**
-     * Fills in which cloudflared will actually be used. Done after render
-     * because resolving it means touching the filesystem and running --version.
+     * Reports which cloudflared will be used, or how to install one.
+     *
+     * Done after render because resolving it means touching the filesystem and
+     * running `--version`.
      */
     private async describeBinary(setting: Setting, details: HTMLElement) {
         const binaries = new CloudflaredBinaryService();
 
-        const addDetail = (label: string, value: string) => {
+        const addDetail = (label: string, value: string, isCode = true) => {
             const row = details.createDiv({ cls: 'wormhole-binary-detail' });
             row.createSpan({ cls: 'wormhole-binary-detail-label', text: label });
-            row.createEl('code', { cls: 'wormhole-binary-detail-value', text: value });
+            if (isCode) {
+                row.createEl('code', { cls: 'wormhole-binary-detail-value', text: value });
+            } else {
+                row.createSpan({ cls: 'wormhole-binary-detail-value', text: value });
+            }
         };
 
         try {
@@ -117,39 +134,47 @@ export class WormholeSettingTab extends PluginSettingTab {
             details.empty();
 
             if (existing) {
-                setting.setDesc(
-                    existing.source === 'system'
-                        ? 'Using a copy already installed on this computer. Nothing will be downloaded.'
-                        : 'Using the checksum-verified copy Note Wormhole installed.'
-                );
+                setting.setDesc('Found. Note Wormhole will run this copy; it never downloads or installs one.');
                 addDetail('Binary', existing.path);
-                addDetail('Version', existing.version ?? CLOUDFLARED_VERSION);
-                return;
-            }
-
-            const plan = binaries.getDownloadPlan();
-
-            if (!plan) {
-                setting.setDesc(
-                    `Cloudflare publishes no cloudflared build for ${process.platform}/${process.arch}. ` +
-                    `Install it manually and Note Wormhole will use it.`
-                );
-                details.remove();
+                if (existing.version) addDetail('Version', existing.version);
                 return;
             }
 
             setting.setDesc(
-                'Not installed. On first share it will be downloaded and checked against its SHA-256. ' +
-                'Install cloudflared yourself and Note Wormhole will prefer your copy.'
+                "Not found. Note Wormhole needs Cloudflare's cloudflared to open a tunnel, " +
+                'and does not install it for you. Install it with one of these, then use "Check again".'
             );
-            addDetail('Version', plan.version);
-            addDetail('Download', plan.url);
-            addDetail('SHA-256', plan.sha256);
-            addDetail('Install to', plan.installPath);
+
+            for (const method of installMethodsFor()) {
+                if (method.command) {
+                    addDetail(method.label, method.command);
+                } else if (method.url) {
+                    const row = details.createDiv({ cls: 'wormhole-binary-detail' });
+                    row.createSpan({ cls: 'wormhole-binary-detail-label', text: method.label });
+                    row.createEl('a', {
+                        cls: 'wormhole-binary-detail-value',
+                        text: method.url,
+                        href: method.url,
+                        attr: { target: '_blank', rel: 'noopener noreferrer' }
+                    });
+                }
+            }
+
+            addDetail('Looked in', searchLocationsFor(), false);
+
+            const guide = details.createDiv({ cls: 'wormhole-binary-detail' });
+            guide.createSpan({ cls: 'wormhole-binary-detail-label', text: 'Guide' });
+            guide.createEl('a', {
+                cls: 'wormhole-binary-detail-value',
+                text: "Cloudflare's installation instructions",
+                href: CLOUDFLARED_DOWNLOADS_URL,
+                attr: { target: '_blank', rel: 'noopener noreferrer' }
+            });
         } catch (error) {
             console.error('[Wormhole] Could not resolve cloudflared', error);
             setting.setDesc('Could not determine the cloudflared status. Check the developer console.');
             details.remove();
         }
     }
+
 }

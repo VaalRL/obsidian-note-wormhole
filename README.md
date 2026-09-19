@@ -4,7 +4,7 @@ Instantly share your notes via a secure, temporary, local wormhole. No cloud upl
 
 Note Wormhole turns your machine into a temporary web server for a single note, and exposes it through a Cloudflare quick tunnel. Close the tab, disable the plugin, or quit the app, and the link is dead.
 
-![Sharing a note: the command palette, the one-time cloudflared consent, then a live public link](docs/images/share-a-note.gif)
+![Sharing a note: the command palette, the sharing confirmation, then a live public link](docs/images/share-a-note.gif)
 
 ## Features
 
@@ -20,7 +20,7 @@ Note Wormhole turns your machine into a temporary web server for a single note, 
 
 1. Open the note you want to share.
 2. Click the **radio tower** icon in the ribbon, or run the **Start wormhole for current note** command.
-3. On first use you'll be asked to allow the one-time tunnel component download (see [Network use](#network-use) below).
+3. On first use you'll be asked to confirm what sharing exposes (see [Network use](#network-use) below). You need [`cloudflared` installed](#requires-cloudflared).
 4. The link is copied to your clipboard, and a green dot appears in the tab header.
 
 Both commands are in the command palette:
@@ -55,49 +55,55 @@ selection** on, dragging across the page selects nothing:
 
 ![The shared page in light and dark, then a drag-selection that selects nothing once anti-copy is on](docs/images/reader-view.gif)
 
+## Requires cloudflared
+
+Note Wormhole opens its tunnel by running Cloudflare's [`cloudflared`](https://github.com/cloudflare/cloudflared).
+**You install it; the plugin never downloads or installs it for you.** Without it, sharing does
+not work — the same arrangement as Obsidian plugins that drive `pandoc`, `ffmpeg` or `git`.
+
+| Platform | Install with |
+| --- | --- |
+| Windows | `winget install Cloudflare.cloudflared`, or the `.exe`/`.msi` from [releases](https://github.com/cloudflare/cloudflared/releases/latest) |
+| macOS | `brew install cloudflared` |
+| Linux | [Cloudflare's package repository](https://pkg.cloudflare.com/), or the `.deb`/`.rpm` from [releases](https://github.com/cloudflare/cloudflared/releases/latest) |
+
+Cloudflare's own [installation guide](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/)
+covers every platform.
+
+The plugin's settings tab tells you whether it was found, shows which copy will be run, and
+gives the install command for your platform when there is none. Detection runs again on every
+share, so no restart is needed after installing — and on Windows it also checks winget's install
+location directly, because a running Obsidian keeps the `PATH` it started with.
+
+### Files it reads outside your vault
+
+To find `cloudflared`, the plugin looks on your `PATH` and in the standard install locations for
+your platform — `/opt/homebrew/bin`, `/usr/local/bin`, `/usr/bin`, `/snap/bin`, `~/.cloudflared`
+and `~/.local/bin` on macOS and Linux, and the `cloudflared` folder under `Program Files` on
+Windows. It runs `cloudflared --version` on a candidate to confirm it really is cloudflared
+before spawning it. That is the only thing Note Wormhole reads from outside the vault, and it
+writes nothing outside the vault at all.
+
 ## Network use
 
-This plugin is not self-contained. Before installing, understand what it does on the network:
+Before installing, understand what this plugin does on the network:
 
 | What | Where to | When |
 | --- | --- | --- |
-| Downloads the `cloudflared` binary | Cloudflare's official GitHub releases | Only if you have no `cloudflared`, once, and only after you accept the in-app prompt |
-| Runs `cloudflared` as a child process | — | While a wormhole is open |
+| Runs your `cloudflared` as a child process | — | While a wormhole is open |
 | Relays note content through a Cloudflare quick tunnel | Cloudflare's edge network | While a wormhole is open |
+| Serves the note over HTTP | `127.0.0.1` only, on an OS-assigned port | While a wormhole is open |
 
-### How the binary is obtained
-
-Note Wormhole **prefers a `cloudflared` you installed yourself.** On first share it looks on
-your `PATH` and in the usual install locations (Homebrew, `/usr/local/bin`, `Program Files`, …).
-If it finds one, it uses it and downloads nothing.
-
-Only when no `cloudflared` exists does it offer to fetch one, and that download is constrained:
-
-- **Pinned version.** It downloads one specific release, never "latest". The version, URL and
-  SHA-256 live in [`src/services/cloudflaredReleases.ts`](src/services/cloudflaredReleases.ts).
-- **Checksum verified.** The download is hashed while it streams. If the SHA-256 does not match
-  the pinned value, it is discarded and nothing is installed.
-- **Shown before it happens.** The consent dialog displays the exact URL, version, checksum,
-  size, and install path before you agree.
-- **HTTPS and GitHub only.** Redirects are followed only within `github.com` and
-  `githubusercontent.com`, and only over HTTPS.
-- **Outside your vault.** It installs to a per-user cache directory
-  (`~/.cache`, `~/Library/Caches`, or `%LOCALAPPDATA%`) — never into the vault, so it is
-  never picked up by Obsidian Sync, and never into the world-writable OS temp directory.
-
-Nothing is fetched until you have seen exactly what will be fetched:
-
-![Cloudflared consent dialog](docs/images/cloudflared-consent.png)
-
-You can revoke consent from the plugin's settings tab, which also shows which binary is
-currently in use. If you would rather the plugin never download anything, install `cloudflared`
-yourself before your first share.
-
-![Plugin settings](docs/images/settings.png)
+The plugin makes no other network requests. There is no telemetry, no account, and no server of
+ours anywhere in the path.
 
 The tunnel is a Cloudflare **quick tunnel**: no Cloudflare account or token is required, the URL
 is randomly assigned, and the service is subject to
-[Cloudflare's terms](https://www.cloudflare.com/website-terms/).
+[Cloudflare's terms](https://www.cloudflare.com/terms/).
+
+Before the first share, the plugin spells out what that exposes and asks you to confirm:
+
+![The sharing confirmation dialog](docs/images/cloudflared-consent.png)
 
 ## Security and privacy
 
@@ -121,6 +127,7 @@ Side by side, the same drag across the same paragraph, with anti-copy off and on
 
 - **Desktop only.** The plugin runs a local Node.js HTTP server and a child process, which Obsidian mobile does not support.
 - **Obsidian 1.5.0 or newer.**
+- **[`cloudflared`](#requires-cloudflared) installed on your machine.** The plugin does not install it.
 - **An internet connection** to establish the tunnel.
 
 ## Installation
@@ -146,24 +153,14 @@ On first run you get a short introduction, once:
 npm install
 npm run dev     # watch build
 npm run build   # typecheck + production bundle
-npm test        # release table, path control, tunnel URL parsing
+npm test        # install guidance, path control, tunnel URL parsing
 npm run lint
 ```
 
-The plugin has no runtime dependencies. To move to a newer `cloudflared`, run:
-
-```bash
-npm run update-cloudflared -- 2026.8.2
-```
-
-That downloads every release asset, hashes it, and rewrites the checksum table from what it
-actually fetched. Checksums are never written by hand.
-
-## Support
-
-Note Wormhole is free and MIT licensed. If it saved you some time:
-
-<a href="https://www.buymeacoffee.com/whoami885" target="_blank" rel="noopener noreferrer"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" width="217" height="60"></a>
+The plugin has no runtime dependencies, and ships no binaries. It runs whatever `cloudflared`
+it finds on the machine; see [`src/services/CloudflaredBinaryService.ts`](src/services/CloudflaredBinaryService.ts)
+for the detection, and [`src/services/cloudflaredInstall.ts`](src/services/cloudflaredInstall.ts)
+for the guidance shown when there is none.
 
 ## License
 

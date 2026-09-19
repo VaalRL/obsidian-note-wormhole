@@ -4,7 +4,8 @@ import { LocalServerService } from './LocalServerService';
 import { TunnelService } from './TunnelService';
 import { CloudflaredBinaryService, ResolvedBinary } from './CloudflaredBinaryService';
 import { WormholeOverlay } from '../ui/WormholeOverlay';
-import { BinaryInstallationModal } from '../ui/BinaryInstallationModal';
+import { CloudflaredRequiredModal } from '../ui/CloudflaredRequiredModal';
+import { TunnelConsentModal } from '../ui/TunnelConsentModal';
 import NoteWormholePlugin from "../../main";
 
 export interface SessionConfig {
@@ -47,75 +48,55 @@ export class WormholeManager {
             return existing.publicUrl;
         }
 
-        const binary = await this.ensureCloudflared();
+        const binary = await this.resolveCloudflared();
         return this.performStartSharing(leafId, markdownContent, filePath, binary);
     }
 
     /**
-     * Resolves a cloudflared binary, asking for consent first.
+     * Finds the cloudflared to run, and gets consent for what the share exposes.
      *
-     * Consent is tracked in two parts on purpose: agreeing to run a copy the
-     * user already installed is a smaller ask than agreeing to let the plugin
-     * download an executable, so losing the system binary re-prompts rather
-     * than silently starting a download.
+     * Note Wormhole never installs cloudflared. When there is none, the user is
+     * told how to install it and given one chance to say they have done so,
+     * which re-runs the search - no restart needed.
      */
-    private async ensureCloudflared(): Promise<ResolvedBinary> {
-        const existing = await this.binaries.findExisting();
-        const settings = this.plugin.settings;
+    private async resolveCloudflared(): Promise<ResolvedBinary> {
+        let binary = await this.binaries.findExisting();
 
-        const consented = existing
-            ? settings.hasAcceptedTunnelTerms
-            : settings.hasAcceptedTunnelTerms && settings.hasAcceptedBinaryDownload;
+        if (!binary) {
+            const retry = await this.showInstallInstructions();
+            binary = retry ? await this.binaries.findExisting() : null;
 
-        if (!consented) {
-            await this.requestConsent(existing);
+            if (!binary) {
+                if (retry) new Notice('Still no cloudflared found. Check that it is on your PATH.');
+                throw new Error('cloudflared is not installed');
+            }
         }
 
-        if (existing) return existing;
+        if (!this.plugin.settings.hasAcceptedTunnelTerms) {
+            const accepted = await this.requestConsent(binary);
+            if (!accepted) {
+                new Notice('Wormhole cancelled.');
+                throw new Error('Sharing declined');
+            }
+            this.plugin.settings.hasAcceptedTunnelTerms = true;
+            await this.plugin.saveSettings();
+        }
 
-        return this.downloadCloudflared();
+        return binary;
     }
 
-    /** Opens the consent modal; resolves on accept, rejects if the user declines. */
-    private requestConsent(existing: ResolvedBinary | null): Promise<void> {
-        const plan = existing ? null : this.binaries.getDownloadPlan();
-
-        return new Promise((resolve, reject) => {
-            new BinaryInstallationModal(this.app, {
-                existing,
-                plan,
-                onAccept: () => {
-                    this.plugin.settings.hasAcceptedTunnelTerms = true;
-                    if (!existing) {
-                        this.plugin.settings.hasAcceptedBinaryDownload = true;
-                    }
-                    void this.plugin.saveSettings().then(resolve).catch(reject);
-                },
-                onCancel: () => {
-                    new Notice("Wormhole cancelled: cloudflared was not approved.");
-                    reject(new Error("Cloudflared permission declined"));
-                }
-            }).open();
+    /** Resolves true if the user says they have just installed cloudflared. */
+    private showInstallInstructions(): Promise<boolean> {
+        return new Promise((resolve) => {
+            new CloudflaredRequiredModal(this.app, resolve).open();
         });
     }
 
-    /** Downloads and verifies the pinned cloudflared, reporting progress. */
-    private async downloadCloudflared(): Promise<ResolvedBinary> {
-        const notice = new Notice("Downloading cloudflared... 0%", 0);
-        let lastShown = -1;
-
-        try {
-            return await this.binaries.install(({ receivedBytes, totalBytes }) => {
-                if (!totalBytes) return;
-                const percent = Math.min(100, Math.floor((receivedBytes / totalBytes) * 100));
-                // Repainting on every chunk would thrash the DOM.
-                if (percent === lastShown) return;
-                lastShown = percent;
-                notice.setMessage(`Downloading cloudflared... ${percent}%`);
-            });
-        } finally {
-            notice.hide();
-        }
+    /** Resolves true if the user agrees to expose the note. */
+    private requestConsent(binary: ResolvedBinary): Promise<boolean> {
+        return new Promise((resolve) => {
+            new TunnelConsentModal(this.app, binary, resolve).open();
+        });
     }
 
     private async performStartSharing(
@@ -130,9 +111,10 @@ export class WormholeManager {
         // Declared outside the try block so the catch/finally path can always
         // clear them — otherwise a failed start leaves a permanent notice on screen.
         const startupNotice = new Notice("Opening wormhole... ⏳", 0); // Persist
-        // If it takes > 2s, it's likely downloading
-        const downloadTimer = setTimeout(() => {
-            startupNotice.setMessage("Constructing tunnel... (first run downloads components)");
+        // Past a couple of seconds it is cloudflared negotiating with Cloudflare,
+        // which is worth saying so the wait does not look like a hang.
+        const slowStartTimer = setTimeout(() => {
+            startupNotice.setMessage("Constructing tunnel... (waiting for Cloudflare)");
         }, 2500);
 
         try {
@@ -194,7 +176,7 @@ export class WormholeManager {
             server.stop();
             throw e;
         } finally {
-            clearTimeout(downloadTimer);
+            clearTimeout(slowStartTimer);
             startupNotice.hide();
         }
     }
