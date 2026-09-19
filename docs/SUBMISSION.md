@@ -11,8 +11,8 @@ Tracking document for getting **Note Wormhole** into the official community plug
 | Description has no "Obsidian", does not start with "This plugin", ends with punctuation, < 250 chars | ✅ |
 | `minAppVersion` matches the APIs actually used (`MarkdownRenderer.render`, `Modal.setTitle` → 1.5.0) | ✅ |
 | `isDesktopOnly: true` (uses `node:http` and a child process) | ✅ |
-| `authorUrl` points at a real URL | ✅ |
-| `fundingUrl` in manifest instead of a donate image in the settings tab | ✅ |
+| `author` / `authorUrl` / LICENSE all name the same handle, and `authorUrl` is the author's page rather than this repo | ✅ |
+| `fundingUrl` in manifest; the settings tab links support as text, not a remote banner image | ✅ |
 | `versions.json` present | ✅ |
 | `version-bump.mjs` present (referenced by `npm version`) | ✅ |
 | `LICENSE` in repo root | ✅ |
@@ -22,45 +22,63 @@ Tracking document for getting **Note Wormhole** into the official community plug
 | No secrets or unrelated projects tracked in the repo | ✅ |
 | Build is not minified (reviewers must be able to read it) | ✅ |
 | ESLint config + `npm run lint` clean | ✅ |
+| Automated tests (`npm test`) covering the pinned release table, path control and tunnel URL parsing | ✅ |
+| CI runs lint + tests + build on every push, and again before a release is cut | ✅ |
 | Sentence case for commands, ribbon tooltip, settings, notices | ✅ |
 | No `console.log`; only `console.error` on real failures | ✅ |
 | No default hotkeys; command ids contain no plugin id and no "command" | ✅ |
 | No inline styles or hardcoded colours in plugin UI — all via `styles.css` and CSS variables | ✅ |
 | Icon buttons have `aria-label`, tab indicator is keyboard operable, `:focus-visible` outlines defined | ✅ |
 | Tunnel and local server torn down on `onunload` and on tab close | ✅ |
+| Tab-header indicators removed on `onunload` (Obsidian does not own that DOM, so it cannot clean it up for us) | ✅ |
+| Consent dialog dismissed with Escape or the close button is treated as a refusal, not left pending | ✅ |
+| Background timer does no work while nothing is shared | ✅ |
 | Prefers a user-installed cloudflared; downloads only as a fallback | ✅ |
 | Download is version-pinned and SHA-256 verified, with the URL shown before consent | ✅ |
 | No runtime dependencies | ✅ |
 
+## Done on GitHub
+
+| Item | Status |
+| --- | --- |
+| Repository description set byte-for-byte to the `manifest.json` description (the review bot compares them) | ✅ |
+| Issues enabled (required by the review process) | ✅ |
+
 ## Manual steps still required
 
-These cannot be done from the repository itself.
+These need a decision or a credential that the repository cannot supply.
 
-1. **Rotate the leaked Local REST API credentials.**
-   A previous commit tracked `Note Wormhole/.obsidian/plugins/obsidian-local-rest-api/data.json`,
-   which contained a plaintext `apiKey` and a TLS certificate + private key. The files are
-   no longer tracked, but they remain in git history.
-   - Regenerate the API key in the Local REST API plugin settings.
-   - If the repository was ever public, treat the certificate as compromised and regenerate it.
-   - Optionally scrub history with `git filter-repo --path "Note Wormhole" --invert-paths`
-     (this rewrites history and requires a force push).
+1. **Scrub the leaked Local REST API credentials from git history.** ⚠️ *blocking*
+   Commit `62d974f` tracked `Note Wormhole/.obsidian/plugins/obsidian-local-rest-api/data.json`,
+   which contained a plaintext `apiKey` and a TLS certificate + private key. The file is no
+   longer tracked, but it is still reachable in history — so publishing the repository would
+   publish the key.
+   - Regenerate the API key in the Local REST API plugin settings, and regenerate the
+     certificate. Do this regardless of the scrub: assume the value is spent.
+   - Scrub the history before the repository goes public:
+     ```bash
+     git filter-repo --path "Note Wormhole" --invert-paths
+     git push --force --all && git push --force --tags
+     ```
+     This rewrites every commit hash and needs a force push, so it must happen before anyone
+     else clones or forks.
 
-2. **Set the GitHub repository description** to exactly:
-   ```
-   Instantly share your notes via a secure, temporary, local wormhole. No cloud upload.
-   ```
-   Obsidian's review bot compares it byte-for-byte with `manifest.json`.
+2. **Make the repository public.** ⚠️ *blocking*
+   It is currently private. `obsidianmd/obsidian-releases` requires a public repository, and
+   the review bot cannot read the release assets otherwise. Do this only after step 1.
 
-3. **Enable GitHub Issues** on the repository (required by the review process).
-
-4. **Cut the first release.**
+3. **Cut the first release.**
    ```bash
    npm version 1.0.0        # syncs manifest.json + versions.json
    git push --follow-tags
    ```
-   The tag must be `1.0.0` — no `v` prefix. The workflow creates a draft release with
-   `main.js`, `manifest.json`, and `styles.css` attached as individual files (not a zip).
-   Publish the draft.
+   The tag must be `1.0.0` — no `v` prefix. The workflow lints, tests, builds, checks that the
+   tag matches `manifest.json`, then creates a draft release with `main.js`, `manifest.json`
+   and `styles.css` attached as individual files (not a zip). Publish the draft.
+
+4. **Do one live end-to-end share** before publishing the release — see *Not verified* below.
+   The tab-header dot, the floating overlay and the viewer count have never been seen against
+   a real tunnel.
 
 5. **Open the submission PR** against
    [`obsidianmd/obsidian-releases`](https://github.com/obsidianmd/obsidian-releases),
@@ -69,7 +87,7 @@ These cannot be done from the repository itself.
    {
      "id": "note-wormhole",
      "name": "Note Wormhole",
-     "author": "Antigravity",
+     "author": "VaalRL",
      "description": "Instantly share your notes via a secure, temporary, local wormhole. No cloud upload.",
      "repo": "VaalRL/obsidian-note-wormhole"
    }
@@ -108,6 +126,20 @@ its binary into `os.tmpdir()`, performed no checksum verification at all, pinned
 SIGINT/SIGUSR handlers on every tunnel start without removing them. That dependency has been
 removed; the plugin now has **no runtime dependencies**.
 
+### "Use `Platform` from the API instead of `process.platform`"
+
+A fair question, and the usual answer ("it breaks on mobile") does not apply here —
+the plugin is `isDesktopOnly: true` and cannot load on mobile at all.
+
+`Platform` exposes `isDesktop`, `isMacOS`, `isWin`, `isLinux`, but **not the CPU
+architecture**, and picking a cloudflared asset needs both: `darwin-arm64` and
+`darwin-x64` are different downloads with different checksums. `process.arch` is the
+only source for that, so the asset table is keyed on `${process.platform}-${process.arch}`
+and the surrounding code stays consistent with it rather than mixing two platform APIs.
+
+`resolveAsset(platform, arch)` takes both as parameters precisely so the mapping is
+testable without pretending to be another machine — see `tests/cloudflaredReleases.test.ts`.
+
 ### "It exposes vault content to the public internet"
 
 Point to the loopback-only bind, the root-path-only handler, in-memory rendering, the response
@@ -116,7 +148,22 @@ headers (CSP, `no-store`, `noindex`, `no-referrer`), and the teardown paths in
 
 ## What has been verified, and how
 
-Run against the real cloudflared release on Linux x64:
+### Automated (`npm test`, 23 assertions, no network)
+
+| Behaviour | Covered by |
+| --- | --- |
+| Pinned release table: every platform present, 64-char hex checksums, plausible sizes, archive flag matches the asset name | `tests/cloudflaredReleases.test.ts` |
+| Windows on ARM maps to the x64 asset *and its checksum*, and is flagged emulated | same |
+| Unsupported platform returns null rather than guessing an asset | same |
+| Every download URL is HTTPS and inside `ALLOWED_DOWNLOAD_HOSTS`; lookalike hosts (`github.com.evil.test`) are not | same |
+| Root path serves the note from memory; CSP / `no-store` / `nosniff` / `noindex` / `no-referrer` all present | `tests/localServer.test.ts` |
+| **S-03 path control**: `/secret`, `/../main.ts`, `/favicon.ico` all 404 and leak no body | same |
+| Heartbeat returns 204 with no CORS grant; counts one viewer per id; ignores a missing id | same |
+| **F-05**: after `stop()` the port refuses connections and the viewer list is cleared | same |
+| Tunnel URL parsed from cloudflared's boxed output, including a URL split across stream chunks | `tests/tunnelUrl.test.ts` |
+| The bare `trycloudflare.com` domain in the request log is not mistaken for the tunnel URL | same |
+
+### Manual, against the real cloudflared release on Linux x64:
 
 | Behaviour | Result |
 | --- | --- |
@@ -156,12 +203,83 @@ the linter could catch, and all three are fixed in this branch:
 3. The launcher showed the file extension in the title and repeated the file name as its
    subtitle for notes at the vault root.
 
-**Not verified:** the live public tunnel, and therefore every UI state that only exists once a
-tunnel is up — the tab-header dot, the floating overlay, and the live viewer count. The
-development sandbox's egress policy blocks `api.trycloudflare.com`, so cloudflared started but
-could not obtain a quick tunnel. That did exercise the new error path, which failed fast with a
-readable diagnostic instead of hanging. An end-to-end share through Cloudflare, and the overlay
-in its live state, still need a manual check before release.
+A later review pass found four more that the typechecker, the linter and the screenshots all
+missed, fixed in this branch as well:
+
+4. **Dismissing the cloudflared consent dialog with Escape or the window close button left
+   `startSharing()` awaiting a promise that could never settle** — the share hung silently and
+   forever. Only the Cancel and Agree buttons resolved it. `onClose()` now reports an
+   undecided dismissal as a refusal.
+5. **Tab-header indicators survived `onunload`.** Obsidian owns that DOM and does not clean up
+   an injected child, and the plugin's own event handlers are gone by then, so disabling the
+   plugin while sharing left a dead green dot in the tab. `TabHeaderDecorator.removeAll()` now
+   runs from `onunload`.
+6. **The 3-second refresh timer walked every open leaf forever, even with nothing shared.**
+   It now returns immediately when the session count is zero.
+7. **The floating panel rebuilt its entire DOM every 3 seconds**, which would drop keyboard
+   focus from a button mid-interaction. It now patches the viewer count and lock state in
+   place, and only when the value actually changed.
+
+## Verified against a real tunnel
+
+The gap recorded here previously — that no live tunnel had ever been established, so none of
+the UI that only exists during a session had been seen — is now closed. Driven against a real
+Obsidian 1.9 desktop install on Windows 11, with a genuine Cloudflare quick tunnel:
+
+| Behaviour | Result |
+| --- | --- |
+| Consent dialog, "existing binary" variant | Shown with the real path and version |
+| Quick tunnel established | `https://<random>.trycloudflare.com` assigned and reachable |
+| Notice on success, link copied to clipboard | Confirmed |
+| Floating control panel, positioned and styled | Confirmed |
+| Status bar switches to "Wormhole active" | Confirmed |
+| **Tab-header indicator** | **Was broken — see below. Fixed and re-verified.** |
+| Tab-header context menu | All four items present, in sentence case |
+| **Live viewer count** | Confirmed with a real browser on the public URL: tab label `Wormhole active (1 viewer)`, overlay `🟢 Live • 1 viewer` |
+| **Anti-copy actually blocks selection** | Measured on the live page with a real mouse drag: **82 characters selected with it off, 0 with it on** |
+| Theme mode follows the visitor's `prefers-color-scheme` | Confirmed, light and dark, against the public URL |
+| Stopping a session | Indicator, overlay and session all gone; `Wormhole closed.` notice shown |
+| **The link really dies** | Fetching the URL after stopping returns HTTP 502 from Cloudflare's edge — the origin is gone |
+| Pinned SHA-256 matches the real Cloudflare asset | Confirmed by independent download: byte count and digest both match `cloudflaredReleases.ts` |
+
+Note for anyone quoting the old PRD: a stopped tunnel answers **502**, not 404. The 404 in
+`req.md` §2.1 describes the intent, not what Cloudflare's edge returns once the origin is gone.
+The README does not claim 404 for a dead link.
+
+### The eighth defect: the tab indicator never rendered
+
+`TabHeaderDecorator.decorateLeaf` gated everything on `leaf.tabHeaderInnerEl`. That property
+does not exist on current Obsidian — the tab header exposes `tabHeaderEl`,
+`tabHeaderInnerIconEl`, `tabHeaderInnerTitleEl` and `tabHeaderStatusContainerEl` instead. The
+guard was therefore never satisfied and **F-08 was dead: no indicator was ever drawn**, on any
+tab, in any version this could have shipped to.
+
+Nothing caught it. It typechecks (the property was declared in `src/types/index.ts`), it lints,
+and it fails silently rather than throwing. It only becomes visible with a live session in
+front of you, which is exactly what had never been done.
+
+The indicator now mounts into `tabHeaderStatusContainerEl` — Obsidian's own per-tab status
+area, alongside its pin and link indicators — falling back to the title's parent row on builds
+that lack it. `src/types/index.ts` now declares only properties that actually exist.
+
+**Still not verified:** the viewer count with more than one reader attached at once (it was
+exercised with a single real reader), and behaviour on macOS and Linux — everything above was
+run on Windows 11, so the `.tgz` extraction path for macOS assets has not been executed against
+a real download.
+
+### How the recordings were made
+
+The README's GIFs are real UI, captured by driving Obsidian over the Electron remote debugging
+protocol: an isolated `--user-data-dir`, a throwaway vault, a real quick tunnel, and one
+screenshot per UI state rather than a screencast, so each state can be held long enough to read.
+The mouse cursor in them is drawn on afterwards — screenshots taken this way contain no pointer.
+
+One thing worth knowing if this is ever repeated: Obsidian routes modals and notices through its
+own `activeWindow` / `activeDocument` globals for pop-out support, and updates them from focus
+events. While the window is unfocused they point elsewhere, so anything opened lands in a
+document you are not looking at and **silently never appears** — no error, no exception. Focus
+emulation fixes it, but only if it is enabled *after* the app has finished loading, because the
+one focus transition it generates has to be heard by a listener that exists by then.
 
 ## Known limitations worth stating up front
 

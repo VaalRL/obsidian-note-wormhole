@@ -4,7 +4,7 @@ Instantly share your notes via a secure, temporary, local wormhole. No cloud upl
 
 Note Wormhole turns your machine into a temporary web server for a single note, and exposes it through a Cloudflare quick tunnel. Close the tab, disable the plugin, or quit the app, and the link is dead.
 
-![The plugin in Obsidian](docs/images/obsidian-note.png)
+![Sharing a note: the command palette, the one-time cloudflared consent, then a live public link](docs/images/share-a-note.gif)
 
 ## Features
 
@@ -42,14 +42,18 @@ active one. Tabs that are already live are flagged:
 - The **floating panel** in the bottom-right of the note offers the same controls.
 - The **status bar** item shows how many wormholes are open; click it to toggle the current note.
 
+The viewer count is live — it goes up as readers open the page, and the session ends the moment
+you stop it:
+
+![The tab menu, the viewer count rising as a reader opens the page, and the session being stopped](docs/images/session-controls.gif)
+
 ## What the reader sees
 
-The note is re-rendered into a standalone page. The **Theme mode** setting decides
-whether visitors get light, dark, or whatever their own system prefers:
+The note is re-rendered into a standalone page. The **Theme mode** setting decides whether
+visitors get light, dark, or whatever their own system prefers — and with **Prevent text
+selection** on, dragging across the page selects nothing:
 
-| Light | Dark |
-| --- | --- |
-| ![Shared page, light](docs/images/shared-page-light.png) | ![Shared page, dark](docs/images/shared-page-dark.png) |
+![The shared page in light and dark, then a drag-selection that selects nothing once anti-copy is on](docs/images/reader-view.gif)
 
 ## Network use
 
@@ -103,7 +107,7 @@ is randomly assigned, and the service is subject to
 - Responses are sent with `no-store`, a restrictive `Content-Security-Policy`, `X-Robots-Tag: noindex`, and `Referrer-Policy: no-referrer`.
 - Ending a session destroys the tunnel and force-closes every open socket, so the URL dies immediately.
 
-With **Prevent text selection** on, dragging across the page selects nothing:
+Side by side, the same drag across the same paragraph, with anti-copy off and on:
 
 | Selection allowed | Anti-copy mode |
 | --- | --- |
@@ -126,6 +130,10 @@ With **Prevent text selection** on, dragging across the page selects nothing:
 1. Open **Settings → Community plugins** and search for "Note Wormhole".
 2. Install and enable it.
 
+On first run you get a short introduction, once:
+
+![The first-run welcome dialog](docs/images/welcome.png)
+
 ### Manual
 
 1. Download `main.js`, `manifest.json`, and `styles.css` from the [latest release](https://github.com/VaalRL/obsidian-note-wormhole/releases/latest).
@@ -138,6 +146,7 @@ With **Prevent text selection** on, dragging across the page selects nothing:
 npm install
 npm run dev     # watch build
 npm run build   # typecheck + production bundle
+npm test        # release table, path control, tunnel URL parsing
 npm run lint
 ```
 
@@ -149,6 +158,12 @@ npm run update-cloudflared -- 2026.8.2
 
 That downloads every release asset, hashes it, and rewrites the checksum table from what it
 actually fetched. Checksums are never written by hand.
+
+## Support
+
+Note Wormhole is free and MIT licensed. If it saved you some time:
+
+<a href="https://www.buymeacoffee.com/whoami885" target="_blank" rel="noopener noreferrer"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" width="217" height="60"></a>
 
 ## License
 
