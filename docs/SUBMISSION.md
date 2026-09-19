@@ -19,7 +19,7 @@ Tracking document for getting **Note Wormhole** into the official community plug
 | `README.md` documents features, requirements, network use, and manual install | ✅ |
 | Release workflow attaching `main.js`, `manifest.json`, `styles.css` | ✅ |
 | `main.js` not committed (built and attached to releases) | ✅ |
-| No secrets or unrelated projects tracked in the repo | ✅ |
+| No secrets or unrelated projects tracked in the repo, or anywhere in its history | ✅ |
 | Build is not minified (reviewers must be able to read it) | ✅ |
 | ESLint config + `npm run lint` clean | ✅ |
 | Automated tests (`npm test`) covering the pinned release table, path control and tunnel URL parsing | ✅ |
@@ -33,7 +33,7 @@ Tracking document for getting **Note Wormhole** into the official community plug
 | Tab-header indicators removed on `onunload` (Obsidian does not own that DOM, so it cannot clean it up for us) | ✅ |
 | Consent dialog dismissed with Escape or the close button is treated as a refusal, not left pending | ✅ |
 | Background timer does no work while nothing is shared | ✅ |
-| Prefers a user-installed cloudflared; downloads only as a fallback | ✅ |
+| Prefers a user-installed cloudflared; downloads only as a fallback | ⚠️ see the policy risk below |
 | Download is version-pinned and SHA-256 verified, with the URL shown before consent | ✅ |
 | No runtime dependencies | ✅ |
 
@@ -48,26 +48,27 @@ Tracking document for getting **Note Wormhole** into the official community plug
 
 These need a decision or a credential that the repository cannot supply.
 
-1. **Scrub the leaked Local REST API credentials from git history.** ⚠️ *blocking*
-   Commit `62d974f` tracked `Note Wormhole/.obsidian/plugins/obsidian-local-rest-api/data.json`,
-   which contained a plaintext `apiKey` and a TLS certificate + private key. The file is no
-   longer tracked, but it is still reachable in history — so publishing the repository would
-   publish the key.
-   - Regenerate the API key in the Local REST API plugin settings, and regenerate the
-     certificate. Do this regardless of the scrub: assume the value is spent.
-   - Scrub the history before the repository goes public:
-     ```bash
-     git filter-repo --path "Note Wormhole" --invert-paths
-     git push --force --all && git push --force --tags
-     ```
-     This rewrites every commit hash and needs a force push, so it must happen before anyone
-     else clones or forks.
+> [!important] The submission process changed.
+> Plugins are **no longer** submitted by opening a pull request against
+> `obsidianmd/obsidian-releases` and editing `community-plugins.json`. That repository is now a
+> read-only registry. Submission goes through the Obsidian Community directory at
+> [community.obsidian.md](https://community.obsidian.md), and needs an **Obsidian account**
+> with a **linked GitHub account** so the directory can verify you own the repository.
 
-2. **Make the repository public.** ⚠️ *blocking*
-   It is currently private. `obsidianmd/obsidian-releases` requires a public repository, and
-   the review bot cannot read the release assets otherwise. Do this only after step 1.
+1. **Merge this work into the default branch.** ⚠️ *blocking*
+   The directory reads `manifest.json` from the **HEAD of the repository's default branch**, so
+   `main` must carry the final manifest before submitting. Everything here is currently on
+   `submission-prep`.
 
-3. **Cut the first release.**
+2. **Decide what to do about the cloudflared download.** ⚠️ *blocking — see below*
+   The developer policies forbid a plugin from installing "themselves or their dependencies".
+   The download fallback is at risk under that rule.
+
+3. **Make the repository public.** ⚠️ *blocking*
+   The review needs access to the source, and users' Obsidian installs fetch the release assets
+   from it.
+
+4. **Cut the first release.**
    ```bash
    npm version 1.0.0        # syncs manifest.json + versions.json
    git push --follow-tags
@@ -76,26 +77,45 @@ These need a decision or a credential that the repository cannot supply.
    tag matches `manifest.json`, then creates a draft release with `main.js`, `manifest.json`
    and `styles.css` attached as individual files (not a zip). Publish the draft.
 
-4. **Do one live end-to-end share** before publishing the release — see *Not verified* below.
-   The tab-header dot, the floating overlay and the viewer count have never been seen against
-   a real tunnel.
+   Obsidian downloads those three files from the release whose tag matches the `version` in the
+   committed manifest, so the release and the committed manifest have to agree.
 
-5. **Open the submission PR** against
-   [`obsidianmd/obsidian-releases`](https://github.com/obsidianmd/obsidian-releases),
-   adding this entry to the **end** of `community-plugins.json`:
-   ```json
-   {
-     "id": "note-wormhole",
-     "name": "Note Wormhole",
-     "author": "VaalRL",
-     "description": "Instantly share your notes via a secure, temporary, local wormhole. No cloud upload.",
-     "repo": "VaalRL/obsidian-note-wormhole"
-   }
-   ```
+5. **Submit at [community.obsidian.md](https://community.obsidian.md).**
+   Sign in with an Obsidian account, link the GitHub account that owns the repository, then add
+   the plugin. No JSON entry to write by hand any more.
+
+6. **Expect the automated review.** Every submitted version is scanned automatically for code
+   quality, security vulnerabilities and malware, and the results appear as a scorecard on the
+   plugin's directory page. A new submission must pass before it is listed at all, and a
+   published plugin that later fails is removed from search within 24 hours.
+
+## The policy risk worth resolving before submitting
+
+The developer policies list, under **Not allowed**:
+
+> Plugins and themes must not:
+> - Install or update themselves or their dependencies.
+
+Note Wormhole downloads and installs `cloudflared` when it cannot find one. That is installing a
+dependency, and it is the single most likely reason for this submission to be rejected. The
+mitigations already in place — pinned version, SHA-256 verification, HTTPS and GitHub-only
+hosts, informed two-stage consent, install outside the vault — make the download *safe*, but
+they do not make it *permitted*, and the automated scan sees an executable being fetched at
+runtime.
+
+The plugin already prefers a cloudflared the user installed themselves. The lowest-risk path is
+to make that the **only** path: detect it, and when it is missing, explain how to install it
+(`brew install cloudflared`, `winget install Cloudflare.cloudflared`, the official download
+page) instead of fetching it. That costs first-run convenience and removes the policy exposure
+entirely. `CloudflaredBinaryService.findExisting()` already does the detection, so this is
+deleting a path rather than writing one.
+
+If the download is kept, say so plainly in the submission and be ready for it to be the thing
+the review turns on.
 
 ## Expect reviewers to ask about
 
-This plugin does two things that get extra scrutiny. Have answers ready in the PR thread.
+This plugin does two things that get extra scrutiny. Have answers ready for the review thread.
 
 ### "It downloads and executes a third-party binary"
 
