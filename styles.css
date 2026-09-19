@@ -4,8 +4,11 @@
 
 .wormhole-status-icon {
     font-size: 0.6em;
-    margin-right: 4px;
+    /* Sits in Obsidian's own tab status area next to the pin/link indicators,
+       so it needs breathing room on both sides rather than just the right. */
+    margin: 0 2px;
     cursor: pointer;
+    line-height: 1;
 }
 
 .wormhole-status-icon:focus-visible {

@@ -33,9 +33,9 @@ export default class NoteWormholePlugin extends Plugin {
 
         // 2. Initialize Status Bar
         this.statusBarItem = this.addStatusBarItem();
-        this.statusBarItem.onClickEvent(() => {
+        this.registerDomEvent(this.statusBarItem, 'click', () => {
             void this.toggleActiveWormholeFromStatusBar().catch((error) => {
-                console.error('Failed to toggle wormhole from status bar', error);
+                console.error('[Wormhole] Failed to toggle from status bar', error);
             });
         });
         this.updateStatusBar();
@@ -43,8 +43,11 @@ export default class NoteWormholePlugin extends Plugin {
         // 3. Register Settings Tab
         this.addSettingTab(new WormholeSettingTab(this.app, this));
 
-        // Periodic Refresh for Viewer Counts (every 3 seconds)
+        // Periodic refresh for viewer counts (every 3 seconds). With nothing
+        // shared there is nothing to poll, so stay off the main thread entirely
+        // rather than walking every open leaf forever in the background.
         this.registerInterval(window.setInterval(() => {
+            if (this.wormholeManager.getActiveSessionCount() === 0) return;
             this.tabDecorator.refreshAll();
             this.wormholeManager.refreshOverlays();
         }, 3000));
@@ -109,6 +112,8 @@ export default class NoteWormholePlugin extends Plugin {
 
     onunload() {
         this.wormholeManager?.unload();
+        // Runs after the sessions are gone so nothing re-adds an indicator.
+        this.tabDecorator?.removeAll();
     }
 
     async loadSettings() {

@@ -16,6 +16,12 @@ export class BinaryInstallationModal extends Modal {
     private plan: DownloadPlan | null;
     private onAccept: () => void;
     private onCancel: () => void;
+    /**
+     * Whether a button was used. The caller waits on a promise that only settles
+     * through onAccept/onCancel, so dismissing with Escape or the close button
+     * has to be reported as a cancellation — otherwise the share hangs forever.
+     */
+    private decided = false;
 
     constructor(
         app: App,
@@ -107,10 +113,7 @@ export class BinaryInstallationModal extends Modal {
             .addButton(btn => btn
                 .setButtonText('Close')
                 .setCta()
-                .onClick(() => {
-                    this.onCancel();
-                    this.close();
-                }));
+                .onClick(() => this.decline()));
     }
 
     private renderCloudflareNotice(contentEl: HTMLElement) {
@@ -140,17 +143,21 @@ export class BinaryInstallationModal extends Modal {
         new Setting(contentEl)
             .addButton(btn => btn
                 .setButtonText('Cancel')
-                .onClick(() => {
-                    this.onCancel();
-                    this.close();
-                }))
+                .onClick(() => this.decline()))
             .addButton(btn => btn
                 .setButtonText(acceptLabel)
                 .setCta()
                 .onClick(() => {
+                    this.decided = true;
                     this.onAccept();
                     this.close();
                 }));
+    }
+
+    private decline() {
+        this.decided = true;
+        this.onCancel();
+        this.close();
     }
 
     private addDetail(parent: HTMLElement, label: string, value: string) {
@@ -162,5 +169,11 @@ export class BinaryInstallationModal extends Modal {
     onClose() {
         const { contentEl } = this;
         contentEl.empty();
+
+        // Dismissed with Escape or the close button rather than a choice.
+        if (!this.decided) {
+            this.decided = true;
+            this.onCancel();
+        }
     }
 }

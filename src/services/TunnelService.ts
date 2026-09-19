@@ -12,8 +12,11 @@ import { ResolvedBinary } from "./CloudflaredBinaryService";
  * SIGINT/SIGUSR handlers on every start without ever removing them.
  */
 
-/** cloudflared prints the assigned URL inside a boxed log line. */
-const TUNNEL_URL_PATTERN = /https:\/\/[a-z0-9][a-z0-9-]*\.trycloudflare\.com/i;
+/**
+ * cloudflared prints the assigned URL inside a boxed log line. Exported so the
+ * parsing can be tested against real cloudflared output without a live tunnel.
+ */
+export const TUNNEL_URL_PATTERN = /https:\/\/[a-z0-9][a-z0-9-]*\.trycloudflare\.com/i;
 
 /** How long to wait for the URL before giving up. */
 const STARTUP_TIMEOUT_MS = 45000;
