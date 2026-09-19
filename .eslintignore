@@ -1,5 +1,6 @@
 node_modules/
 main.js
+test-build/
 Browser Extensions/
 obsidian-mcp-monitor/
 Test Vault/

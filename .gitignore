@@ -7,9 +7,12 @@ yarn.lock
 yarn-error.log
 
 # Build artifacts (published as GitHub release assets, not committed)
+# styles.css is source, so we keep it. If you used SCSS, you'd ignore the output css.
 main.js
 main.js.map
-# styles.css is source, so we keep it. If you used SCSS, you'd ignore the output css.
+
+# Compiled test bundles (npm test rebuilds these)
+test-build/
 
 # OS generated files
 .DS_Store
