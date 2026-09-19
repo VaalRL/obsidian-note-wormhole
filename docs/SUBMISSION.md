@@ -66,10 +66,16 @@ These need a decision or a credential that the repository cannot supply.
 
 3. **Cut the first release.**
    ```bash
-   npm version 1.0.0        # syncs manifest.json + versions.json
+   npm version 1.0.0 --allow-same-version   # syncs manifest.json + versions.json, tags
    git push --follow-tags
    ```
-   The tag must be `1.0.0` — no `v` prefix. The workflow lints, tests, builds, checks that the
+   `--allow-same-version` is needed for 1.0.0 only, because package.json already carries it;
+   later releases are a plain `npm version patch|minor|major`.
+
+   The tag must be `1.0.0` — **no `v` prefix**. npm tags as `v<version>` by default, which the
+   directory rejects, so `.npmrc` in the repo root sets `tag-version-prefix=""`. The release
+   workflow re-checks the tag against `manifest.json` and fails the build rather than publish a
+   mismatched release. The workflow lints, tests, builds, checks that the
    tag matches `manifest.json`, then creates a draft release with `main.js`, `manifest.json`
    and `styles.css` attached as individual files (not a zip). Publish the draft.
 
