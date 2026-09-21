@@ -29,9 +29,15 @@ Note Wormhole/
 **/.obsidian/
 
 # AI & Agent local state (Private/Local)
+# The agent rules and workflow docs live in their own repository:
+# https://github.com/VaalRL/obsidian-plugin-agent-kit
 .claude/
 .gemini/
 .mcp.json
+CLAUDE.md
+gemini.md
+claude/
+OBSIDIAN_PLUGIN_DEVELOPMENT_RULES.md
 
 # Unrelated side projects — do not ship in the plugin repo
 obsidian-mcp-monitor/
