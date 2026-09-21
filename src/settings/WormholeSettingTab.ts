@@ -119,14 +119,25 @@ export class WormholeSettingTab extends PluginSettingTab {
     private async describeBinary(setting: Setting, details: HTMLElement) {
         const binaries = new CloudflaredBinaryService();
 
+        // Label and value go straight into the grid as siblings; a wrapper would
+        // need display:contents, which Obsidian's CSS lint flags.
         const addDetail = (label: string, value: string, isCode = true) => {
-            const row = details.createDiv({ cls: 'wormhole-binary-detail' });
-            row.createSpan({ cls: 'wormhole-binary-detail-label', text: label });
+            details.createSpan({ cls: 'wormhole-binary-detail-label', text: label });
             if (isCode) {
-                row.createEl('code', { cls: 'wormhole-binary-detail-value', text: value });
+                details.createEl('code', { cls: 'wormhole-binary-detail-value', text: value });
             } else {
-                row.createSpan({ cls: 'wormhole-binary-detail-value', text: value });
+                details.createSpan({ cls: 'wormhole-binary-detail-value', text: value });
             }
+        };
+
+        const addLink = (label: string, text: string, href: string) => {
+            details.createSpan({ cls: 'wormhole-binary-detail-label', text: label });
+            details.createEl('a', {
+                cls: 'wormhole-binary-detail-value',
+                text,
+                href,
+                attr: { target: '_blank', rel: 'noopener noreferrer' }
+            });
         };
 
         try {
@@ -149,27 +160,13 @@ export class WormholeSettingTab extends PluginSettingTab {
                 if (method.command) {
                     addDetail(method.label, method.command);
                 } else if (method.url) {
-                    const row = details.createDiv({ cls: 'wormhole-binary-detail' });
-                    row.createSpan({ cls: 'wormhole-binary-detail-label', text: method.label });
-                    row.createEl('a', {
-                        cls: 'wormhole-binary-detail-value',
-                        text: method.url,
-                        href: method.url,
-                        attr: { target: '_blank', rel: 'noopener noreferrer' }
-                    });
+                    addLink(method.label, method.url, method.url);
                 }
             }
 
             addDetail('Looked in', searchLocationsFor(), false);
 
-            const guide = details.createDiv({ cls: 'wormhole-binary-detail' });
-            guide.createSpan({ cls: 'wormhole-binary-detail-label', text: 'Guide' });
-            guide.createEl('a', {
-                cls: 'wormhole-binary-detail-value',
-                text: "Cloudflare's installation instructions",
-                href: CLOUDFLARED_DOWNLOADS_URL,
-                attr: { target: '_blank', rel: 'noopener noreferrer' }
-            });
+            addLink('Guide', "Cloudflare's installation instructions", CLOUDFLARED_DOWNLOADS_URL);
         } catch (error) {
             console.error('[Wormhole] Could not resolve cloudflared', error);
             setting.setDesc('Could not determine the cloudflared status. Check the developer console.');

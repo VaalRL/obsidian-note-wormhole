@@ -74,10 +74,10 @@ export class TunnelConsentModal extends Modal {
                 .onClick(() => this.settle(true)));
     }
 
+    /** Appends a label/value pair as two direct children of the details grid. */
     private addDetail(parent: HTMLElement, label: string, value: string) {
-        const row = parent.createDiv({ cls: 'wormhole-binary-detail' });
-        row.createSpan({ cls: 'wormhole-binary-detail-label', text: label });
-        row.createEl('code', { cls: 'wormhole-binary-detail-value', text: value });
+        parent.createSpan({ cls: 'wormhole-binary-detail-label', text: label });
+        parent.createEl('code', { cls: 'wormhole-binary-detail-value', text: value });
     }
 
     /** Reports the outcome once, then closes. */

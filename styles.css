@@ -81,7 +81,11 @@
     outline-offset: 1px;
 }
 
-/* --- Install instructions (shown when cloudflared is missing) --- */
+/* --- Install instructions (shown when cloudflared is missing) ---
+   Label and value are direct children of the grid. A wrapper element with
+   display:contents would read better in the markup, but Obsidian's CSS lint
+   flags it as only partially supported, and it has a history of removing the
+   element from the accessibility tree. */
 
 .wormhole-install-methods {
     display: grid;
@@ -93,10 +97,6 @@
     border-radius: var(--radius-s, 4px);
     background-color: var(--background-secondary);
     font-size: var(--font-ui-smaller);
-}
-
-.wormhole-install-method {
-    display: contents;
 }
 
 .wormhole-install-label {
@@ -124,10 +124,6 @@
     border-radius: var(--radius-s, 4px);
     background-color: var(--background-secondary);
     font-size: var(--font-ui-smaller);
-}
-
-.wormhole-binary-detail {
-    display: contents;
 }
 
 .wormhole-binary-detail-label {

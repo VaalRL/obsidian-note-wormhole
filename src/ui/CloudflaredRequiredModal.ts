@@ -39,13 +39,12 @@ export class CloudflaredRequiredModal extends Modal {
 
         const methods = contentEl.createDiv({ cls: 'wormhole-install-methods' });
         for (const method of installMethodsFor()) {
-            const row = methods.createDiv({ cls: 'wormhole-install-method' });
-            row.createSpan({ cls: 'wormhole-install-label', text: method.label });
+            methods.createSpan({ cls: 'wormhole-install-label', text: method.label });
 
             if (method.command) {
-                row.createEl('code', { cls: 'wormhole-install-command', text: method.command });
+                methods.createEl('code', { cls: 'wormhole-install-command', text: method.command });
             } else if (method.url) {
-                row.createEl('a', {
+                methods.createEl('a', {
                     cls: 'wormhole-install-command',
                     text: method.url,
                     href: method.url,

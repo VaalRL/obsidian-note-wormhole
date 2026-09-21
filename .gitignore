@@ -1,7 +1,8 @@
 # NPM environment
+# package-lock.json IS committed: without it the directory cannot reproduce the
+# build byte-for-byte, and dependency versions drift between environments.
 node_modules/
 npm-debug.log
-package-lock.json
 # Yarn environment
 yarn.lock
 yarn-error.log

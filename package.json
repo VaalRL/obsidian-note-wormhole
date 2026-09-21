@@ -1,6 +1,6 @@
 {
     "name": "obsidian-note-wormhole",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "description": "Instantly share your notes via a secure, temporary, local wormhole.",
     "main": "main.js",
     "scripts": {

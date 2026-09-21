@@ -163,6 +163,57 @@ asynchronous, machine-dependent content, which is not what a declarative schema 
 
 Worth revisiting once `1.13.x` is the common floor.
 
+## Round two: the rest of the scan
+
+The same report covered more than source code. What it said, and what 1.0.2 does about it.
+
+### Network requests — pass
+
+No suspicious patterns found. Worth keeping that way: the plugin makes no HTTP requests of its
+own, and since the cloudflared download was removed there is nothing left that fetches anything.
+
+### Behaviour — three capability warnings, all inherent
+
+These describe what the plugin *can* do, not something it does wrong. They cannot be "fixed"
+without removing the feature, so the answer is to keep the capability as narrow as the code
+allows and to disclose it.
+
+| Flagged | Reality |
+| --- | --- |
+| **Direct filesystem access** via `fs` | One call: `statSync`, to check a candidate binary exists. The plugin never writes to the filesystem. The import is now `{ statSync }` rather than `* as fs`, so the reachable surface is visible at the top of the file |
+| **Shell execution** via `child_process` | The feature. `execFileSync` for `where`/`which`, `execFile` for `--version`, `spawn` for the tunnel. All `execFile`-family, never `exec`, so nothing is passed through a shell |
+| **Clipboard access** | The share URL is written to the clipboard on success. Read-only never happens — the plugin only writes |
+
+All three are documented in the README, under *Requires cloudflared* and *Network use*.
+
+### CSS lint — `display: contents`
+
+`styles.css` used it twice, on wrapper elements whose only job was to let a label/value pair
+participate in the parent grid. Obsidian's lint flags it as only partially supported, and it has a
+history of dropping the element from the accessibility tree.
+
+Removed by deleting the wrappers: the label and value are now direct children of the grid. The
+markup is shorter and the CSS feature is gone.
+
+### Build verification — no lockfile
+
+`package-lock.json` was in `.gitignore`, so the directory could not reproduce the build
+byte-for-byte. It is now committed, and both workflows run `npm ci` rather than `npm install` —
+a committed lockfile that the build ignores would be decoration.
+
+### Artifact attestations
+
+The release workflow now issues [build provenance](https://docs.github.com/en/actions/security-for-github-actions/using-artifact-attestations)
+for `main.js` and `styles.css` via `actions/attest-build-provenance`, which needs `id-token: write`
+and `attestations: write`. Anyone can then verify the published assets were built from this
+repository by this workflow:
+
+```bash
+gh attestation verify main.js --repo VaalRL/obsidian-note-wormhole
+```
+
+Note that attestations are also listed as a future component of the directory's safety scorecard.
+
 ## Precedent in the directory
 
 Checked against `community-plugins.json` (7,808 published plugins) and, where the answer

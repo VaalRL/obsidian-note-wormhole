@@ -1,6 +1,9 @@
-import * as fs from "fs";
-import * as os from "os";
-import * as path from "path";
+// Imported by name rather than as namespaces, so what this module can reach is
+// visible at the top: one read-only stat, the user's home directory, path
+// joining, and running a binary. It never writes to the filesystem.
+import { statSync } from "fs";
+import { homedir } from "os";
+import { join } from "path";
 import { execFile, execFileSync } from "child_process";
 
 /**
@@ -60,16 +63,16 @@ export class CloudflaredBinaryService {
             const programFilesX86 = process.env["ProgramFiles(x86)"];
             const localAppData = process.env.LOCALAPPDATA;
 
-            if (programFiles) candidates.push(path.join(programFiles, "cloudflared", "cloudflared.exe"));
-            if (programFilesX86) candidates.push(path.join(programFilesX86, "cloudflared", "cloudflared.exe"));
+            if (programFiles) candidates.push(join(programFiles, "cloudflared", "cloudflared.exe"));
+            if (programFilesX86) candidates.push(join(programFilesX86, "cloudflared", "cloudflared.exe"));
             if (localAppData) {
                 // Obsidian inherits the PATH it was started with, so a cloudflared
                 // installed while Obsidian is running will not be on it until the
                 // app restarts. Checking where winget and user-scope installers
                 // actually put things means "install it, then share" just works.
                 candidates.push(
-                    path.join(localAppData, "Microsoft", "WinGet", "Links", "cloudflared.exe"),
-                    path.join(localAppData, "Programs", "cloudflared", "cloudflared.exe")
+                    join(localAppData, "Microsoft", "WinGet", "Links", "cloudflared.exe"),
+                    join(localAppData, "Programs", "cloudflared", "cloudflared.exe")
                 );
             }
         } else {
@@ -78,8 +81,8 @@ export class CloudflaredBinaryService {
                 "/usr/local/bin/cloudflared",
                 "/usr/bin/cloudflared",
                 "/snap/bin/cloudflared",
-                path.join(os.homedir(), ".cloudflared", "cloudflared"),
-                path.join(os.homedir(), ".local", "bin", "cloudflared")
+                join(homedir(), ".cloudflared", "cloudflared"),
+                join(homedir(), ".local", "bin", "cloudflared")
             );
         }
 
@@ -129,7 +132,7 @@ export class CloudflaredBinaryService {
 
     private isFile(candidate: string): boolean {
         try {
-            return fs.statSync(candidate).isFile();
+            return statSync(candidate).isFile();
         } catch {
             return false;
         }
