@@ -1,8 +1,8 @@
 {
 	"id": "note-wormhole",
 	"name": "Note Wormhole",
-	"version": "1.0.0",
-	"minAppVersion": "1.5.0",
+	"version": "1.0.1",
+	"minAppVersion": "1.5.1",
 	"description": "Instantly share your notes via a secure, temporary, local wormhole. No cloud upload.",
 	"author": "VaalRL",
 	"authorUrl": "https://github.com/VaalRL",

@@ -9,7 +9,7 @@ Tracking document for getting **Note Wormhole** into the official community plug
 | `manifest.json` in repo root, id `note-wormhole` (lowercase, no "obsidian", not ending in "plugin") | ✅ |
 | Plugin name has no "Obsidian" / "Plugin" suffix | ✅ |
 | Description has no "Obsidian", does not start with "This plugin", ends with punctuation, < 250 chars | ✅ |
-| `minAppVersion` matches the APIs actually used (`MarkdownRenderer.render`, `Modal.setTitle` → 1.5.0) | ✅ |
+| `minAppVersion` matches the APIs actually used — `workspace.getLeafById` is `@since 1.5.1`, so 1.5.1 | ✅ |
 | `isDesktopOnly: true` (uses `node:http` and a child process) | ✅ |
 | `author` / `authorUrl` / LICENSE all name the same handle, and `authorUrl` is the author's page rather than this repo | ✅ |
 | `fundingUrl` in manifest; the settings tab links support as text, not a remote banner image | ✅ |
@@ -21,8 +21,8 @@ Tracking document for getting **Note Wormhole** into the official community plug
 | `main.js` not committed (built and attached to releases) | ✅ |
 | No secrets or unrelated projects tracked in the repo, or anywhere in its history | ✅ |
 | Build is not minified (reviewers must be able to read it) | ✅ |
-| ESLint config + `npm run lint` clean | ✅ |
-| Automated tests (`npm test`) covering the pinned release table, path control and tunnel URL parsing | ✅ |
+| ESLint config + `npm run lint` clean, including the **type-aware** ruleset the directory runs | ✅ |
+| Automated tests (`npm test`) covering install guidance, path control and tunnel URL parsing | ✅ |
 | CI runs lint + tests + build on every push, and again before a release is cut | ✅ |
 | Sentence case for commands, ribbon tooltip, settings, notices | ✅ |
 | No `console.log`; only `console.error` on real failures | ✅ |
@@ -35,7 +35,8 @@ Tracking document for getting **Note Wormhole** into the official community plug
 | Background timer does no work while nothing is shared | ✅ |
 | Runs only a user-installed cloudflared; never downloads or installs it | ✅ |
 | README discloses network use, and the files read outside the vault | ✅ |
-| No runtime dependencies | ✅ |
+| No runtime dependencies, and no build dependency flagged as replaceable | ✅ |
+| Timers scoped to `window` for pop-out compatibility; promise rejections always carry an `Error` | ✅ |
 
 ## Done on GitHub
 
@@ -44,52 +45,33 @@ Tracking document for getting **Note Wormhole** into the official community plug
 | Repository description set byte-for-byte to the `manifest.json` description (the review bot compares them) | ✅ |
 | Issues enabled (required by the review process) | ✅ |
 
-## Manual steps still required
+## Where the submission stands
 
-These need a decision or a credential that the repository cannot supply.
+| Step | Status |
+| --- | --- |
+| Work merged to the default branch (the directory reads `manifest.json` from its HEAD) | ✅ |
+| Repository public, description byte-identical to the manifest, Issues enabled | ✅ |
+| Release cut with `main.js`, `manifest.json`, `styles.css` as individual assets | ✅ `1.0.0`, then `1.0.1` |
+| Submitted at [community.obsidian.md](https://community.obsidian.md) | ✅ 2026-09-21 |
+| Automated review round one | ⚠️ one error, fixed in 1.0.1 — see below |
 
-> [!important] The submission process changed.
-> Plugins are **no longer** submitted by opening a pull request against
-> `obsidianmd/obsidian-releases` and editing `community-plugins.json`. That repository is now a
-> read-only registry. Submission goes through the Obsidian Community directory at
-> [community.obsidian.md](https://community.obsidian.md), and needs an **Obsidian account**
-> with a **linked GitHub account** so the directory can verify you own the repository.
+> [!important] Submission is not a pull request.
+> Plugins are **no longer** submitted against `obsidianmd/obsidian-releases`; that repository is a
+> read-only registry. Submission goes through [community.obsidian.md](https://community.obsidian.md)
+> with an **Obsidian account** linked to a GitHub account.
 
-1. **Merge this work into the default branch.** ⚠️ *blocking*
-   The directory reads `manifest.json` from the **HEAD of the repository's default branch**, so
-   `main` must carry the final manifest before submitting. Everything here is currently on
-   `submission-prep`.
+### Cutting a release
 
-2. **Make the repository public.** ⚠️ *blocking*
-   The review needs access to the source, and users' Obsidian installs fetch the release assets
-   from it.
+```bash
+npm version patch          # syncs manifest.json + versions.json via version-bump.mjs, and tags
+git push --follow-tags
+```
 
-3. **Cut the first release.**
-   ```bash
-   npm version 1.0.0 --allow-same-version   # syncs manifest.json + versions.json, tags
-   git push --follow-tags
-   ```
-   `--allow-same-version` is needed for 1.0.0 only, because package.json already carries it;
-   later releases are a plain `npm version patch|minor|major`.
-
-   The tag must be `1.0.0` — **no `v` prefix**. npm tags as `v<version>` by default, which the
-   directory rejects, so `.npmrc` in the repo root sets `tag-version-prefix=""`. The release
-   workflow re-checks the tag against `manifest.json` and fails the build rather than publish a
-   mismatched release. The workflow lints, tests, builds, checks that the
-   tag matches `manifest.json`, then creates a draft release with `main.js`, `manifest.json`
-   and `styles.css` attached as individual files (not a zip). Publish the draft.
-
-   Obsidian downloads those three files from the release whose tag matches the `version` in the
-   committed manifest, so the release and the committed manifest have to agree.
-
-4. **Submit at [community.obsidian.md](https://community.obsidian.md).**
-   Sign in with an Obsidian account, link the GitHub account that owns the repository, then add
-   the plugin. No JSON entry to write by hand any more.
-
-5. **Expect the automated review.** Every submitted version is scanned automatically for code
-   quality, security vulnerabilities and malware, and the results appear as a scorecard on the
-   plugin's directory page. A new submission must pass before it is listed at all, and a
-   published plugin that later fails is removed from search within 24 hours.
+The tag must equal the manifest version with **no `v` prefix**; `.npmrc` sets
+`tag-version-prefix=""` because npm would otherwise tag `v1.0.1`. The workflow lints, tests,
+builds, re-checks the tag against `manifest.json`, then creates a draft release. Publish the
+draft. Obsidian downloads the three assets from the release whose tag matches the committed
+manifest, so the two have to agree.
 
 ## The dependency policy, and how it was resolved
 
@@ -116,6 +98,70 @@ needed to not download. The bundle lost about 12% of its size.
 What stayed: the plugin still *runs* an external binary and still relays note content through
 Cloudflare. Both are disclosed in the README, the second behind an explicit first-run
 confirmation.
+
+## Round one of the automated review, and what it found
+
+Submitted 2026-09-21. The scan returned **one error and a set of warnings**, all addressed in
+1.0.1.
+
+### The error: APIs newer than the declared minAppVersion
+
+`obsidianmd/no-unsupported-api` flagged `WormholeManager.ts:140`, `:196` and `:269` — all three
+`this.app.workspace.getLeafById(leafId)`.
+
+`obsidian.d.ts` marks it `@since 1.5.1`; the manifest declared `1.5.0`. Off by a single patch
+release. Everything else the plugin uses is `1.4.4` or older — `setTooltip` (1.4.4),
+`onLayoutReady` (0.11.0), `registerDomEvent` (0.14.8), `getActiveViewOfType` and `setHeading`
+(0.9.16), `iterateAllLeaves` (0.9.7). `minAppVersion` is now `1.5.1`.
+
+To check this before submitting rather than after, read the `@since` annotations out of
+`obsidian.d.ts` for the APIs actually called. Beware of matching bare method names: `get`,
+`filter`, `includes` and friends hit JavaScript built-ins and produce a wildly inflated answer.
+
+### The warnings: a tsconfig problem wearing a type-safety costume
+
+The scan reported roughly 150 `@typescript-eslint/no-unsafe-*` findings across every file that
+touches a Node API, plus `'error' type that acts as 'any'` on `Server`, `ChildProcess` and
+`NodeJS.Signals`. Running the same rules locally reproduced **one**.
+
+The cause was not the code. `skipLibCheck` was passed on the `tsc` command line but was absent
+from `tsconfig.json`, and the directory's type-aware lint loads the tsconfig. Without it,
+`obsidian.d.ts` itself fails to typecheck — `Menu`, `Modal` and `PopoverSuggest` are each
+reported as incorrectly implementing `HistoryHandler` — and those upstream errors degrade type
+resolution across the program, so Node-derived values arrive as `any`.
+
+Fixed by moving `skipLibCheck` into `tsconfig.json` where any tool reading the project sees it,
+declaring `"types": ["node"]` explicitly rather than relying on ambient discovery, and raising
+`lib`/`target` from ES7/ES6 to ES2018 so `@types/node` has the language features it expects.
+`@types/node` went from `^16` (Node 16 is long EOL) to `^20`, matching the CI runtime.
+
+`npm run lint` now runs the type-aware ruleset itself, so this cannot silently regress: what the
+directory checks and what CI checks are the same thing. Turning it on surfaced two genuine
+defects that the untyped lint had never seen — `loadData()` returning `any` and spreading into
+the settings object, which disabled type checking everywhere settings are read; and an exit
+message that printed `code null` when cloudflared died on a signal.
+
+### The rest
+
+- `window.setTimeout` / `window.clearTimeout` instead of the bare globals, for pop-out window
+  compatibility. Seven call sites.
+- A promise rejection now always carries an `Error`, never a bare value.
+- `builtin-modules` removed. It was a build-time dependency flagged as replaceable, and
+  `node:module` exports `builtinModules` directly, so the dependency is simply gone.
+
+### Deliberately not done: the declarative settings API
+
+The scan recommends implementing `getSettingDefinitions()`, noting that `display()` is deprecated
+since 1.13.0 and that settings will not appear in Obsidian's settings search without it.
+
+Not adopted, for two reasons. `getSettingDefinitions` is `@since 1.13.0`, so implementing it
+would force `minAppVersion` from `1.5.1` to `1.13.0` and drop every user not on the newest
+Obsidian — a large cost for search indexing. And the tunnel section of this settings tab is not
+declarative: it resolves which `cloudflared` will run by touching the filesystem and executing
+`--version`, then renders either the resolved path or per-platform install instructions. That is
+asynchronous, machine-dependent content, which is not what a declarative schema describes.
+
+Worth revisiting once `1.13.x` is the common floor.
 
 ## Precedent in the directory
 

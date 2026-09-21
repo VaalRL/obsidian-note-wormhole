@@ -1,6 +1,8 @@
 import esbuild from "esbuild";
 import process from "process";
-import builtins from "builtin-modules";
+// Node ships its own list; the "builtin-modules" package is flagged as
+// replaceable by Obsidian's dependency scan, and this needs no dependency.
+import { builtinModules as builtins } from "node:module";
 
 const banner =
     `/*

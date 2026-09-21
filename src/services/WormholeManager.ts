@@ -113,7 +113,7 @@ export class WormholeManager {
         const startupNotice = new Notice("Opening wormhole... ⏳", 0); // Persist
         // Past a couple of seconds it is cloudflared negotiating with Cloudflare,
         // which is worth saying so the wait does not look like a hang.
-        const slowStartTimer = setTimeout(() => {
+        const slowStartTimer = window.setTimeout(() => {
             startupNotice.setMessage("Constructing tunnel... (waiting for Cloudflare)");
         }, 2500);
 
@@ -176,7 +176,7 @@ export class WormholeManager {
             server.stop();
             throw e;
         } finally {
-            clearTimeout(slowStartTimer);
+            window.clearTimeout(slowStartTimer);
             startupNotice.hide();
         }
     }

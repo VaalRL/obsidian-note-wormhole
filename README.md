@@ -126,7 +126,7 @@ Side by side, the same drag across the same paragraph, with anti-copy off and on
 ## Requirements
 
 - **Desktop only.** The plugin runs a local Node.js HTTP server and a child process, which Obsidian mobile does not support.
-- **Obsidian 1.5.0 or newer.**
+- **Obsidian 1.5.1 or newer.**
 - **[`cloudflared`](#requires-cloudflared) installed on your machine.** The plugin does not install it.
 - **An internet connection** to establish the tunnel.
 

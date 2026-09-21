@@ -73,7 +73,7 @@ export class TunnelService {
             const finish = (fn: () => void) => {
                 if (settled) return;
                 settled = true;
-                clearTimeout(timer);
+                window.clearTimeout(timer);
                 child.stdout?.off("data", onData);
                 child.stderr?.off("data", onData);
                 child.off("error", onError);
@@ -99,14 +99,19 @@ export class TunnelService {
             };
 
             const onExit = (code: number | null, signal: NodeJS.Signals | null) => {
+                // Node reports one of the two and leaves the other null; saying
+                // "code null" in a user-facing error helps nobody.
+                let how = "for an unknown reason";
+                if (signal) how = `on signal ${signal}`;
+                else if (code !== null) how = `with exit code ${code}`;
+
                 finish(() => reject(new Error(
-                    `cloudflared exited before a tunnel was ready ` +
-                    `(${signal ? `signal ${signal}` : `code ${code}`}).` +
+                    `cloudflared exited ${how} before a tunnel was ready.` +
                     `${this.lastLines(transcript)}`
                 )));
             };
 
-            const timer = setTimeout(() => {
+            const timer = window.setTimeout(() => {
                 finish(() => reject(new Error(
                     `cloudflared did not report a tunnel URL within ` +
                     `${Math.round(STARTUP_TIMEOUT_MS / 1000)}s.${this.lastLines(transcript)}`
@@ -132,19 +137,19 @@ export class TunnelService {
         if (!child || child.exitCode !== null || child.signalCode !== null) return;
 
         await new Promise<void>((resolve) => {
-            const force = setTimeout(() => {
+            const force = window.setTimeout(() => {
                 child.kill("SIGKILL");
             }, SHUTDOWN_GRACE_MS);
 
             child.once("exit", () => {
-                clearTimeout(force);
+                window.clearTimeout(force);
                 resolve();
             });
 
             try {
                 child.kill("SIGTERM");
             } catch {
-                clearTimeout(force);
+                window.clearTimeout(force);
                 resolve();
             }
         });

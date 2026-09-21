@@ -4,18 +4,27 @@
         "inlineSourceMap": true,
         "inlineSources": true,
         "module": "ESNext",
-        "target": "ES6",
+        "target": "ES2018",
         "allowJs": true,
         "noImplicitAny": true,
         "moduleResolution": "node",
         "importHelpers": true,
         "strictNullChecks": true,
         "strict": true,
+        // Obsidian's own obsidian.d.ts does not currently typecheck cleanly
+        // (Menu, Modal and PopoverSuggest are each reported as incorrectly
+        // implementing HistoryHandler). Without this, those upstream errors
+        // degrade type resolution across the program — which is what made an
+        // external type-aware lint see every Node-derived value as `any`.
+        "skipLibCheck": true,
+        // The plugin is isDesktopOnly and uses Node APIs directly, so declare
+        // the dependency rather than relying on ambient discovery.
+        "types": [
+            "node"
+        ],
         "lib": [
             "DOM",
-            "ES5",
-            "ES6",
-            "ES7"
+            "ES2018"
         ]
     },
     "include": [
@@ -26,8 +35,7 @@
         "node_modules",
         "test",
         "coverage",
-        "Browser Extensions",
-        "obsidian-mcp-monitor",
-        "Test Vault"
+        "tests",
+        "test-build"
     ]
 }

@@ -51,9 +51,11 @@ export class LocalServerService {
                 }
             });
 
-            this.server.on("error", (err) => {
+            this.server.on("error", (err: NodeJS.ErrnoException) => {
                 console.error("[Wormhole] Server error:", err);
-                reject(err);
+                // Reject with an Error, never a bare value: callers log it and
+                // some consumers read .message off the rejection reason.
+                reject(err instanceof Error ? err : new Error(String(err)));
             });
         });
     }

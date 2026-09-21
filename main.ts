@@ -117,7 +117,11 @@ export default class NoteWormholePlugin extends Plugin {
     }
 
     async loadSettings() {
-        this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+        // loadData() is typed `any`, and spreading that into settings makes the
+        // whole object `any` — which silently disables type checking everywhere
+        // settings are read. Narrow it before merging.
+        const saved = await this.loadData() as Partial<WormholeSettings> | null;
+        this.settings = Object.assign({}, DEFAULT_SETTINGS, saved);
     }
 
     async saveSettings() {
