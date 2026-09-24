@@ -2,6 +2,8 @@
 
 Instantly share your notes via a secure, temporary, local wormhole. No cloud upload.
 
+🌐 **Project page / 介紹頁面:** https://vaalrl.github.io/obsidian-note-wormhole/ (English · 繁體中文)
+
 Note Wormhole turns your machine into a temporary web server for a single note, and exposes it through a Cloudflare quick tunnel. Close the tab, disable the plugin, or quit the app, and the link is dead.
 
 ![Sharing a note: the command palette, the sharing confirmation, then a live public link](docs/images/share-a-note.gif)
